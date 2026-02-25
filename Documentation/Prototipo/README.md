@@ -38,3 +38,7 @@
 9. Panel de Supervisor Operativo
 
 ![supervisor](img/10.png)
+
+### 2. Diagrama de flujo del sistema
+
+![Diagrama de Flujo](img/DiagramaFlujo.png)

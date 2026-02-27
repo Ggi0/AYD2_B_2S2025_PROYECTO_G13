@@ -1,7 +1,7 @@
 
 # Prototipo Arquitectónico
 
-### 1. Mockups 
+## 1. Mockups 
 
 1. Login del sistema
 
@@ -39,6 +39,26 @@
 
 ![supervisor](img/10.png)
 
-### 2. Diagrama de flujo del sistema
+## 2. Diagramas de Flujo
+
+### 2.1 Diagrama General del fljo del sistema
+
 
 ![Diagrama de Flujo](img/DiagramaFlujo.png)
+
+
+### 2.2 Diagrama de Gestion de usuarios
+
+### 2.3 Diagrama de Registro de pagos
+
+![Diagrama de flujo de registro de pagos](img/FlujoRegistroPagos.png)
+
+### 2.4 Diagrama de Reportes
+
+### 2.5 Diagrama de Facturacion electronica
+
+### 2.6 Diagrama de validacion de credito
+
+### 2.7 Diagrama de ordenes de servicio
+
+

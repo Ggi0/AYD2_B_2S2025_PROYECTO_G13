@@ -61,7 +61,11 @@
 
 ### 2.5 Diagrama de Facturacion electronica
 
+![Facturacion Electronica](img/Facturacionflujo.png)
+
 ### 2.6 Diagrama de validacion de credito
+
+![Validacion de credito](img/Flujovalidacioncredito.png)
 
 ### 2.7 Diagrama de ordenes de servicio
 

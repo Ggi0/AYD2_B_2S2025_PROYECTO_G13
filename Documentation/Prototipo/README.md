@@ -47,13 +47,17 @@
 ![Diagrama de Flujo](img/DiagramaFlujo.png)
 
 
-### 2.2 Diagrama de Gestion de usuarios
+### 2.2 Diagrama de Gestion de usuarios y contratos
+
+![Clientes y contratos](img/FlujoClientesContratos.png)
 
 ### 2.3 Diagrama de Registro de pagos
 
-![Diagrama de flujo de registro de pagos](img/FlujoRegistroPagos.png)
+![Registro de pagos](img/FlujoRegistroPagos.png)
 
 ### 2.4 Diagrama de Reportes
+
+![Reportes](img/FlujoReportes.png)
 
 ### 2.5 Diagrama de Facturacion electronica
 

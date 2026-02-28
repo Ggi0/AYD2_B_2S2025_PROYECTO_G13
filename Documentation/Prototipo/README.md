@@ -41,11 +41,9 @@
 
 ## 2. Diagramas de Flujo
 
-### 2.1 Diagrama General del fljo del sistema
-
+### 2.1 Diagrama General del flujo del sistema
 
 ![Diagrama de Flujo](img/DiagramaFlujo.png)
-
 
 ### 2.2 Diagrama de Gestion de usuarios y contratos
 

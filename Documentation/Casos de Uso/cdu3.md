@@ -1,22 +1,18 @@
 ## CDU003 Facturación Electrónica
 
-CDU003.1 Generación del Borrador de Factura
+Sus expandidos serían:
 
-CDU003.2 Validación
+- CDU003.1 Generación del Borrador de Factura
+- CDU003.2 Validación
+- CDU003.3 Certificación (FEL)
+- CDU003.4 Notificación Automática de Emisión
+- CDU003.5 Sincronización Contable y de Cobro
+- CDU003.6 Consultar Facturas
+- CDU003.7 Visibilidad Cobros
+- CDU003.8 Pago de Facturas
+- CDU003.9 Pagos
 
-CDU003.3 Certificación (FEL)
-
-CDU003.4 Notificación Automática de Emisión
-
-CDU003.5 Sincronización Contable y de Cobro
-
-CDU003.6 Consultar Facturas
-
-CDU003.7 Visibilidad Cobros
-
-CDU003.8 Pago de Facturas
-
-CDU003.9 Pagos
+### Diagrama de expandidos
 
 ![CDU003.png](../images/DCU_3/CDU003.png)
 
@@ -150,3 +146,19 @@ CDU003.9 Pagos
 | Flujos alternos   | FA1 No se rellenan todos los campos<br>FA1.1 Se indica que campos son obligatorios<br>FA1.2 Se completan los campos faltantes<br>FA1.3 Vuelve a el flujo normal                                                                                                                                                                                                                                                                                                                                |
 | Reglas de negocio | Debe de registrar toda la información antes mencionada<br>El pago debe de estar dentro del rango del contrato                                                                                                                                                                                                                                                                                                                                                                                  |
 | Reglas de calidad | Los datos deben de ser verídicos                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+
+### Matrices de trazabilidad
+
+|                     | CDU003.1 | CDU003.2 | CDU003.3 | CDU003.4 | CDU003.5 | CDU003.6 | CDU003.7 | CDU003.8 | CDU003.9 |
+| ------------------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- | -------- |
+| Piloto              | X        |          |          |          |          |          |          |          |          |
+| Cliente             |          |          |          | X        |          |          | X        |          |          |
+| Agente financiero   |          |          | X        |          |          | X        |          |          |          |
+| Departamento Cobros |          |          |          |          |          |          |          |          | X        |
+
+| Stakeholder         | Descripción                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Piloto              | Es la persona que tiene la obligación de cuando es que entrega un carga                                                   |
+| Cliente             | Su papel radica en que puda visualizar y pagar sus facturas verificadas y certificadas                                    |
+| Agente financiero   | En cargado de dar fe a las facturas validadas, y tambien ecargado de verificar el pago de facturas que realiza el cliente |
+| Departamento Cobros | Tiene la potestad de ver los estados de los pagos de las facturas                                                         |

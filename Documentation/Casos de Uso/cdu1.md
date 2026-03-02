@@ -178,7 +178,6 @@
 -------------------------------------------------------------------
 ## CDU002.2 – Modificar Contrato
 
-
 | Campo                 | Detalle |
 | --------------------- | ------- |
 | **Nombre**            | Modificar Contrato Comercial |
@@ -296,3 +295,57 @@
 | **Flujos Alternos**   | **FA1:** La orden cerrada presenta datos incompletos para el historial.<br>FA1.1 El sistema marca los campos incompletos y notifica al Agente Operativo.<br>FA1.2 El Agente Operativo completa la información faltante.<br>FA1.3 Se continúa con el flujo principal (2). |
 | **Reglas de Negocio** | El historial debe actualizarse automáticamente al cierre de cada orden de servicio sin intervención manual.<br>Los datos de historial son de solo lectura para la Gerencia; no pueden ser modificados directamente. |
 | **Reglas de Calidad** | La actualización del historial debe completarse en menos de 5 segundos tras el cierre de la orden.<br>Los indicadores del tablero gerencial deben reflejar los datos actualizados en tiempo real. |
+
+-------------------------------------------------------------------
+
+# Matrices de Trazabilidad
+
+Estas matrices representan un cruce entre dos criterios, se utilizan principalmente para tener una mejor visibilidad del alcance que tiene un cambio o modificación en una parte del sistema.
+
+-------------------------------------------------------------------
+
+## Matriz 1: Actores vs Casos de Uso (Primera Descomposición)
+
+|                        | **CDU001** | **CDU002** |
+| ---------------------- | ---------- | ---------- |
+| **Cliente Corporativo**| X          | X          |
+| **Agente Operativo**   | X          | X          |
+| **Área Contable**      | X          | X          |
+| **Gerencia**           | X          | X          |
+| **Sistema**            | X          | X          |
+
+-------------------------------------------------------------------
+
+## Matriz 2: Actores vs Casos de Uso Expandidos CDU001
+
+|                         | **CDU001.1** | **CDU001.2** | **CDU001.3** | **CDU001.4** | **CDU001.5** |
+| ----------------------- | ------------ | ------------ | ------------ | ------------ | ------------ |
+| **Agente Operativo**    | X            | X            | X            | X            |              |
+| **Cliente Corporativo** |              | X            |              | X            |              |
+| **Área Contable**       |              | X            |              |              | X            |
+| **Gerencia**            |              | X            |              |              |              |
+| **Sistema**             |              |              |              |              | X            |
+
+-------------------------------------------------------------------
+
+## Matriz 3: Actores vs Casos de Uso Expandidos CDU002
+
+|                         | **CDU002.1** | **CDU002.2** | **CDU002.3** | **CDU002.4** | **CDU002.5** | **CDU002.6** | **CDU002.7** | **CDU002.8** |
+| ----------------------- | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ | ------------ |
+| **Agente Operativo**    | X            | X            | X            |              | X            |              |              |              |
+| **Área Contable**       | X            | X            | X            | X            | X            | X            |              |              |
+| **Gerencia**            |              |              | X            |              |              |              |              | X            |
+| **Cliente Corporativo** |              |              |              |              |              |              | X            |              |
+| **Sistema**             |              |              |              |              |              | X            | X            | X            |
+
+-------------------------------------------------------------------
+
+## Matriz 4: Casos de Uso vs Procesos del Negocio
+
+|                                          | **CDU001** | **CDU002** |
+| ---------------------------------------- | ---------- | ---------- |
+| **Registro y Perfilamiento del Cliente** | X          |            |
+| **Formalización de Acuerdos Comerciales**|            | X          |
+| **Validación de Vigencia y Capacidad**   |            | X          |
+| **Vinculación Operativa Automática**     |            | X          |
+| **Actualización de Historial y Desempeño**|           | X          |

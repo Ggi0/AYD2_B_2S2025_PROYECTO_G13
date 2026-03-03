@@ -5,7 +5,7 @@
 Analizando el flujo completo (desde que se genera la orden hasta su cierre administrativo), los actores que interactúan con el sistema son:
 
 || **Representación** |           **Actor**          | **Descripción** |
-|:-:|:------------------:|:----------------------------:|:---------------:|
+|:-:|:------------------:|:----------------------------:|:---------------|
 |1|![actor.png](../images/DCU_2/DCU2_actor.png)| Cliente Corporativo          |Empresa (importadora, exportadora o comercio) que contrata los servicios de transporte de LogiTrans y opera dentro de la plataforma.|
 |2|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Logístico             |Colaborador interno de LogiTrans responsable de la planificación operativa de cada orden de transporte.|
 |3|![actor.png](../images/DCU_2/DCU2_actor.png)| Encargado de Patio           |Colaborador interno que opera físicamente en las instalaciones de carga y es responsable de formalizar la salida de la unidad.|
@@ -39,14 +39,17 @@ trazabilidad en ruta, confirmación de entrega y generación de información par
 ## 4. Caso de uso expandidos - respecto al General
 ### CDU002: Registro y Seguimiento de Órdenes de Servicio
 * CDU002.1: Registro de Orden de Servicio
-* CDU002.2: Validación de Contrato y Bloqueos
-* CDU002.3: Planificación y Asignación de Recursos
-* CDU002.4: Gestión de Carga y Despacho
-* CDU002.5: Monitoreo y Seguimiento en Ruta
-* CDU002.6: Documentación y Confirmación de Entrega
-* CDU002.7: Cierre y Evaluación de Servicio
+* CDU002.2: Planificación y Asignación de Recursos
+* CDU002.3: Gestión de Carga y Despacho
+* CDU002.4: Monitoreo en Ruta
+* CDU002.5: Confirmación de Entrega
+* CDU002.6: Cierre y Evaluación de Servicio
+* CDU002.7: Validación de Contrato y Bloqueos
+* CDU002.8: Validación de Capacidad de Vehículo
+* CDU002.9: Registro de Evento en Ruta
+* CDU002.10: Adjuntar Evidencia Digital 
 
-![actor.png](../images/DCU_2/DCU2_2descomposición.png)
+![actor.png](../images/DCU_2/DCU2_2descomposicion..jpeg)
 
 
 

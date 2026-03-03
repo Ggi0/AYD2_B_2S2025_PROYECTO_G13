@@ -215,4 +215,13 @@ trazabilidad en ruta, confirmación de entrega y generación de información par
 
 ## 5. Matriz de trazabilidad
 
+| Actor               | CDU002.1 | CDU002.2 | CDU002.3 | CDU002.4 | CDU002.5 | CDU002.6 | CDU002.7 | CDU002.8 | CDU002.9 | CDU002.10 |
+|:-|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Cliente Corporativo | X   |     |     | X   |     |     |     |     |     |      |
+| Agente Logístico    | X   | X   |     |     |     | X   |     |     |     |      |
+| Encargado de Patio  |     |     | X   |     |     |     |     | X   |     |      |
+| Piloto              |     |     |     | X   | X   |     |     |     | X   | X    |
+| Agente Financiero   |     |     |     |     | X   |     |     |     |     |      |
+| Gerencia            |     |     |     |     |     | X   |     |     |     |      |
+
 

@@ -36,7 +36,19 @@ trazabilidad en ruta, confirmación de entrega y generación de información par
 ![actor.png](../images/DCU_2/DCU2_1raDescomposicion.png)
 
 
-## 4. Caso de uso expandidos
+## 4. Caso de uso expandidos - respecto al General
+### CDU002: Registro y Seguimiento de Órdenes de Servicio
+* CDU002.1: Registro de Orden de Servicio
+* CDU002.2: Validación de Contrato y Bloqueos
+* CDU002.3: Planificación y Asignación de Recursos
+* CDU002.4: Gestión de Carga y Despacho
+* CDU002.5: Monitoreo y Seguimiento en Ruta
+* CDU002.6: Documentación y Confirmación de Entrega
+* CDU002.7: Cierre y Evaluación de Servicio
+
+![actor.png](../images/DCU_2/DCU2_2descomposición.png)
+
+
 
 ## 5. Matriz de trazabilidad
 

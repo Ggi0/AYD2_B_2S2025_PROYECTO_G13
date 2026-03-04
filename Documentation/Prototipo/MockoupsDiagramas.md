@@ -66,6 +66,69 @@
 17. Portal del cliente Coorporativo
 ![alt text](<mockups_gestion de usuarios y contratos/Portal cliente Coorporativo.png>)
 
+
+### Modulo Registro y Seguimiento de Órdenes de servicio
+
+18. Generarción de la orden de servicio	
+
+![alt text](<mockups_registro y seguimiento de ordenes/GenerarcionOrden1.png>)
+
+![alt text](<mockups_registro y seguimiento de ordenes/GenerarcionOrden2.png>)
+
+![alt text](<mockups_registro y seguimiento de ordenes/GenerarcionOrden1.png>)
+
+
+19. Planificación y asignación de recursos	
+
+![alt text](<mockups_registro y seguimiento de ordenes/Planificacion.png>)
+
+20. Proceso de carga de mercancía al vehículo
+
+![alt text](<mockups_registro y seguimiento de ordenes/Procesocarga.png>)
+
+
+21. Despacho y monitoreo en Ruta
+
+![alt text](<mockups_registro y seguimiento de ordenes/Despacho.png>)
+
+
+22. Documentacion y confirmacion de entrega	
+
+![alt text](<mockups_registro y seguimiento de ordenes/confirmacionentrega.png>)
+
+
+23. Cierre y Evaluación de Servicio
+
+![alt text](<mockups_registro y seguimiento de ordenes/cierre.png>)
+
+
+### Modulo Facturación Electronica
+
+24. Dashboard Financiero
+
+![alt text](<mockups_facturacion electronica/financiero.png>)
+
+25. Certificar Facturas
+
+![alt text](<mockups_facturacion electronica/certificadorfacturas.png>)
+
+
+26. Registro Pagos
+
+![alt text](<mockups_facturacion electronica/registropagos.png>)
+
+
+27. Estado de Cuenta de Clientes
+
+![alt text](<mockups_facturacion electronica/estadoclientes.png>)
+
+
+28. Reportes
+
+![alt text](<mockups_facturacion electronica/reportes.png>)
+
+
+
 ## 2. Diagramas de Flujo
 
 ### 2.1 Diagrama General del flujo del sistema

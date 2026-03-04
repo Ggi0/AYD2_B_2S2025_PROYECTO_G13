@@ -1,8 +1,6 @@
-# Documento de Casos de Uso — LogiTrans Guatemala, S.A.
+# Casos de Uso — LogiTrans Guatemala, S.A.
 
----
-
-# PARTE 1: ACTORES DEL SISTEMA
+1. ACTORES DEL SISTEMA
 
 Analizando el flujo completo (desde que se genera la orden hasta su cierre administrativo), los actores que interactúan con el sistema son:
 
@@ -20,7 +18,7 @@ Analizando el flujo completo (desde que se genera la orden hasta su cierre admin
     Nota: en el Agente financiero solo recibe una notificación automática,lo cual es una interacción pasiva muy limitada. Sin embargo, sí es válido mantenerlo como actor porque en UML, un actor que recibe información del sistema cuenta como interacción.
 
 
-# PARTE 2: CASOS DE USO DE ALTO NIVEL
+2. CASOS DE USO DE ALTO NIVEL
 
 ![Diagrama de alto nivel CDU001](<../images/CDU1/dcu alto nivel.drawio.png>)
 ![Diagrama de alto nivel CDU002](../images/DCU_2/DCU2_altoNivel.png)
@@ -34,7 +32,7 @@ Analizando el flujo completo (desde que se genera la orden hasta su cierre admin
 
 ---
 
-# PARTE 3: PRIMERA DESCOMPOSICIÓN
+3. PRIMERA DESCOMPOSICIÓN
 
 ![Primera descomposición CDU001](<../images/CDU1/Primera descomposicion.drawio.png>)
 ![Primera descomposición CDU002](../images/DCU_2/DCU2_1raDescomposicion.png)
@@ -92,8 +90,7 @@ Analizando el flujo completo (desde que se genera la orden hasta su cierre admin
 - CDU004.5 – Planificación de Capacidad
 
 ---
-
-# PARTE 4: SEGUNDA DESCOMPOSICIÓN (CASOS EXPANDIDOS)
+4. SEGUNDA DESCOMPOSICIÓN (CASOS EXPANDIDOS)
 
 ---
 
@@ -742,7 +739,7 @@ Analizando el flujo completo (desde que se genera la orden hasta su cierre admin
 
 ---
 
-# PARTE 5: MATRICES DE TRAZABILIDAD
+5. MATRICES DE TRAZABILIDAD
 
 ---
 

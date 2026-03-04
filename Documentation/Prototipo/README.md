@@ -39,6 +39,33 @@
 
 ![supervisor](img/10.png)
 
+### Módulo: Gestión de Clientes y Contratos
+
+10. Dashboard General
+![!\[dashboard\](img/mockup_dashboard.png)](<mockups_gestion de usuarios y contratos/Dashboard Principal.png>)
+
+11. Listado de Clientes
+![!\[listado_clientes\](img/mockup_clientes.png)](<mockups_gestion de usuarios y contratos/Listado de Clientes.png>)
+
+12. Registro y Perfil del Cliente
+![!\[perfil_cliente\](img/mockup_perfil.png)](<mockups_gestion de usuarios y contratos/Registro y Perfil del Cliente.png>)
+
+13. Historial y Desempeño del Cliente
+![!\[historial\](img/mockup_historial.png)](<mockups_gestion de usuarios y contratos/Detalle del Cliente – Historial y Desempeño.png>)
+
+14. Creación de Contrato
+![!\[contrato\](img/mockup_contrato.png)](<mockups_gestion de usuarios y contratos/Generado por agente operativo · Tarifario configurado por contabilidad · Descuentos especiales permitidos.png>)
+
+15. Gestión de Tarifarios (Contabilidad)
+![!\[tarifarios\](img/mockup_tarifarios.png)](<mockups_gestion de usuarios y contratos/Gestión de Tarifarios – Área de Contabilidad.png>)
+
+16. Bloqueo Automático para Cliente Coorporativo
+![!\[bloqueo\](img/mockup_bloqueo.png)
+](<mockups_gestion de usuarios y contratos/Validación de Crédito y Bloqueo Automático.png>)
+
+17. Portal del cliente Coorporativo
+![alt text](<mockups_gestion de usuarios y contratos/Portal cliente Coorporativo.png>)
+
 ## 2. Diagramas de Flujo
 
 ### 2.1 Diagrama General del flujo del sistema

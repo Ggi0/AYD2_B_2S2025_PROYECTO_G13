@@ -68,7 +68,12 @@
 ### 2.7 Diagrama de ordenes de servicio
 
 
-### 4.1. Reportes Operativos y Gerenciales (Ejemplo de reporte en CORE)
+### 4.1. Reportes Operativos (Ejemplo de reporte en CORE)
+
+![ReportesGerenciales](img/ReporteOperativo.png)
+
+### 4.1. Reportes Gerenciales
 
 ![ReportesGerenciales](img/ReporteGerencial.png)
-*Imagen 1: Panel Gerencial Consolidado, mostrando KPIs, Rentabilidad y Alertas.*
+
+ 

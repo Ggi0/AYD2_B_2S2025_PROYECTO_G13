@@ -1,7 +1,6 @@
-
 # Prototipo Arquitectónico
 
-## 1. Mockups 
+## 1. Mockups
 
 1. Login del sistema
 
@@ -42,34 +41,33 @@
 ### Módulo: Gestión de Clientes y Contratos
 
 10. Dashboard General
-![!\[dashboard\](img/mockup_dashboard.png)](<mockups_gestion de usuarios y contratos/Dashboard Principal.png>)
+    ![![dashboard](img/mockup_dashboard.png)](<mockups_gestion de usuarios y contratos/Dashboard Principal.png>)
 
 11. Listado de Clientes
-![!\[listado_clientes\](img/mockup_clientes.png)](<mockups_gestion de usuarios y contratos/Listado de Clientes.png>)
+    ![![listado_clientes](img/mockup_clientes.png)](<mockups_gestion de usuarios y contratos/Listado de Clientes.png>)
 
 12. Registro y Perfil del Cliente
-![!\[perfil_cliente\](img/mockup_perfil.png)](<mockups_gestion de usuarios y contratos/Registro y Perfil del Cliente.png>)
+    ![![perfil_cliente](img/mockup_perfil.png)](<mockups_gestion de usuarios y contratos/Registro y Perfil del Cliente.png>)
 
 13. Historial y Desempeño del Cliente
-![!\[historial\](img/mockup_historial.png)](<mockups_gestion de usuarios y contratos/Detalle del Cliente – Historial y Desempeño.png>)
+    ![![historial](img/mockup_historial.png)](<mockups_gestion de usuarios y contratos/Detalle del Cliente – Historial y Desempeño.png>)
 
 14. Creación de Contrato
-![!\[contrato\](img/mockup_contrato.png)](<mockups_gestion de usuarios y contratos/Generado por agente operativo · Tarifario configurado por contabilidad · Descuentos especiales permitidos.png>)
+    ![![contrato](img/mockup_contrato.png)](<mockups_gestion de usuarios y contratos/Generado por agente operativo · Tarifario configurado por contabilidad · Descuentos especiales permitidos.png>)
 
 15. Gestión de Tarifarios (Contabilidad)
-![!\[tarifarios\](img/mockup_tarifarios.png)](<mockups_gestion de usuarios y contratos/Gestión de Tarifarios – Área de Contabilidad.png>)
+    ![![tarifarios](img/mockup_tarifarios.png)](<mockups_gestion de usuarios y contratos/Gestión de Tarifarios – Área de Contabilidad.png>)
 
 16. Bloqueo Automático para Cliente Coorporativo
-![!\[bloqueo\](img/mockup_bloqueo.png)
+    ![![bloqueo](img/mockup_bloqueo.png)
 ](<mockups_gestion de usuarios y contratos/Validación de Crédito y Bloqueo Automático.png>)
 
 17. Portal del cliente Coorporativo
-![alt text](<mockups_gestion de usuarios y contratos/Portal cliente Coorporativo.png>)
-
+    ![alt text](<mockups_gestion de usuarios y contratos/Portal cliente Coorporativo.png>)
 
 ### Modulo Registro y Seguimiento de Órdenes de servicio
 
-18. Generarción de la orden de servicio	
+18. Generarción de la orden de servicio
 
 ![alt text](<mockups_registro y seguimiento de ordenes/GenerarcionOrden1.png>)
 
@@ -77,8 +75,7 @@
 
 ![alt text](<mockups_registro y seguimiento de ordenes/GenerarcionOrden1.png>)
 
-
-19. Planificación y asignación de recursos	
+19. Planificación y asignación de recursos
 
 ![alt text](<mockups_registro y seguimiento de ordenes/Planificacion.png>)
 
@@ -86,21 +83,17 @@
 
 ![alt text](<mockups_registro y seguimiento de ordenes/Procesocarga.png>)
 
-
 21. Despacho y monitoreo en Ruta
 
 ![alt text](<mockups_registro y seguimiento de ordenes/Despacho.png>)
 
-
-22. Documentacion y confirmacion de entrega	
+22. Documentacion y confirmacion de entrega
 
 ![alt text](<mockups_registro y seguimiento de ordenes/confirmacionentrega.png>)
-
 
 23. Cierre y Evaluación de Servicio
 
 ![alt text](<mockups_registro y seguimiento de ordenes/cierre.png>)
-
 
 ### Modulo Facturación Electronica
 
@@ -112,22 +105,25 @@
 
 ![alt text](<mockups_facturacion electronica/certificadorfacturas.png>)
 
-
 26. Registro Pagos
 
 ![alt text](<mockups_facturacion electronica/registropagos.png>)
-
 
 27. Estado de Cuenta de Clientes
 
 ![alt text](<mockups_facturacion electronica/estadoclientes.png>)
 
-
 28. Reportes
 
 ![alt text](<mockups_facturacion electronica/reportes.png>)
 
+29. Pago de Clientes
 
+![alt text](<mockups_facturacion electronica/Pago De Factura Del cliente.png>)
+
+30. Visualización del departamento de Cobros
+
+![alt text](<mockups_facturacion electronica/DepartamentoCobros.png>)
 
 ## 2. Diagramas de Flujo
 
@@ -149,7 +145,7 @@
 
 ### 2.5 Diagrama de Facturacion electronica
 
-![Facturacion Electronica](img/Facturacionflujo.png)
+![Facturacion Electronica](img/DiagramaFlujoCDU003.png)
 
 ### 2.6 Diagrama de validacion de credito
 
@@ -157,4 +153,4 @@
 
 ### 2.7 Diagrama de ordenes de servicio
 
-
+![Diagrama de ordenes de servicio](img/DFOrdenesServicio.png)

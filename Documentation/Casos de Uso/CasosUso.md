@@ -4,7 +4,7 @@
 
 Analizando el flujo completo (desde que se genera la orden hasta su cierre administrativo), los actores que interactúan con el sistema son:
 
-| **Representación** |           **Actor**          | **Descripción** |
+|| **Representación** |           **Actor**          | **Descripción** |
 |:-:|:------------------:|:----------------------------:|:---------------|
 |1|![actor.png](../images/DCU_2/DCU2_actor.png)| Cliente Corporativo | Empresa que contrata servicios de transporte y gestiona su información dentro de la plataforma. |
 |2|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Operativo | Colaborador encargado de formalizar contratos comerciales y definir condiciones operativas. |

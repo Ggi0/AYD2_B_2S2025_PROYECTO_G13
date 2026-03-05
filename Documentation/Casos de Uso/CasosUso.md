@@ -4,38 +4,30 @@
 
 Analizando el flujo completo (desde que se genera la orden hasta su cierre administrativo), los actores que interactúan con el sistema son:
 
-|| **Representación** |           **Actor**          | **Descripción** |
+| **Representación** |           **Actor**          | **Descripción** |
 |:-:|:------------------:|:----------------------------:|:---------------|
-|1|![actor.png](../images/DCU_2/DCU2_actor.png)| Cliente Corporativo          |Empresa (importadora, exportadora o comercio) que contrata los servicios de transporte de LogiTrans y opera dentro de la plataforma.|
-|2|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Logístico             |Colaborador interno de LogiTrans responsable de la planificación operativa de cada orden de transporte.|
-|3|![actor.png](../images/DCU_2/DCU2_actor.png)| Encargado de Patio           |Colaborador interno que opera físicamente en las instalaciones de carga y es responsable de formalizar la salida de la unidad.|
-|4|![actor.png](../images/DCU_2/DCU2_actor.png)| Piloto                       |Conductor asignado a la unidad de transporte, responsable del traslado de la mercancía de origen a destino.|
-|5|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente financiero  |Colaborador del área financiera responsable de procesar la facturación a partir de las órdenes completadas.|
-|6|![actor.png](../images/DCU_2/DCU2_actor.png)| Supervisor Operativo                     |Usuario estratégico de LogiTrans valida la continuidad del negocio.|
-|7|![actor.png](../images/DCU_2/DCU2_actor.png)| Gerencia                     |Usuario estratégico de LogiTrans que consume información consolidada para la toma de decisiones.|
+|1|![actor.png](../images/DCU_2/DCU2_actor.png)| Cliente Corporativo | Empresa que contrata servicios de transporte y gestiona su información dentro de la plataforma. |
+|2|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Operativo | Colaborador encargado de formalizar contratos comerciales y definir condiciones operativas. |
+|3|![actor.png](../images/DCU_2/DCU2_actor.png)| Área Contable | Departamento responsable de parametrizar tarifas, límites de crédito, condiciones financieras y validar aspectos económicos del contrato. |
+|4|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Logístico | Colaborador interno de LogiTrans responsable de la planificación operativa de cada orden de transporte. |
+|5|![actor.png](../images/DCU_2/DCU2_actor.png)| Encargado de Patio | Colaborador interno que opera físicamente en las instalaciones de carga y es responsable de formalizar la salida de la unidad. |
+|6|![actor.png](../images/DCU_2/DCU2_actor.png)| Piloto | Conductor asignado a la unidad de transporte responsable del traslado de la mercancía de origen a destino y de registrar la entrega de la carga. |
+|7|![actor.png](../images/DCU_2/DCU2_actor.png)| Agente Financiero | Colaborador del área financiera responsable de procesar la facturación a partir de las órdenes completadas y validar las facturas generadas. |
+|8|![actor.png](../images/DCU_2/DCU2_actor.png)| Departamento de Cobros | Área encargada de verificar el estado de pago de las facturas y gestionar el seguimiento de los cobros a los clientes. |
+|9|![actor.png](../images/DCU_2/DCU2_actor.png)| Supervisor Operativo | Responsable de monitorear el rendimiento diario de las operaciones logísticas en las distintas sedes. |
+|10|![actor.png](../images/DCU_2/DCU2_actor.png)| Gerencia | Usuario estratégico que consulta información consolidada sobre historial, rentabilidad y desempeño de los contratos para la toma de decisiones. |
 
-
-    Nota: en el Agente financiero solo recibe una notificación automática,lo cual es una interacción pasiva muy limitada. Sin embargo, sí es válido mantenerlo como actor porque en UML, un actor que recibe información del sistema cuenta como interacción.
 
 
 2. CASOS DE USO DE ALTO NIVEL
 
-![Diagrama de alto nivel CDU001](<../images/CDU1/dcu alto nivel.drawio.png>)
-![Diagrama de alto nivel CDU002](../images/DCU_2/DCU2_altoNivel.png)
-
-| Código | Nombre | Descripción General |
-|:------:|:------:|:--------------------|
-| **CDU001** | Gestión de Usuarios y Contratos | Centraliza la relación comercial y la gestión de todos los usuarios del sistema, incluyendo registro, contratos, tarifas y vinculación operativa automática. |
-| **CDU002** | Registro y Seguimiento de Órdenes de Servicio | Administra el ciclo completo de una orden de transporte, desde su creación hasta el cierre administrativo, asegurando trazabilidad y control operativo. |
-| **CDU003** | Facturación Electrónica | Transforma los servicios completados en documentos fiscales válidos (FEL), asegurando cumplimiento legal y acelerando el ciclo de cobro. |
-| **CDU004** | Reportes Operativos y Gerenciales | Transforma la actividad diaria en información útil para medir el rendimiento y guiar la toma de decisiones estratégicas mediante dashboards. |
+![Diagrama de alto nivel CDU001](<../images/DCU/Diagramas-Caso de uso de alto nivel.png>)
 
 ---
 
 3. PRIMERA DESCOMPOSICIÓN
 
-![Primera descomposición CDU001](<../images/CDU1/Primera descomposicion.drawio.png>)
-![Primera descomposición CDU002](../images/DCU_2/DCU2_1raDescomposicion.png)
+![Primera descomposición CDU001](<../images/CDU1/Primera descomposicion.png>)
 
 ## CDU001 — Gestión de Usuarios y Contratos
 
@@ -738,6 +730,49 @@ Analizando el flujo completo (desde que se genera la orden hasta su cierre admin
 | Reglas de calidad | Los resultados deben presentarse mediante gráficos predictivos claros.<br>Las proyecciones deben poder exportarse en formato digital para su análisis externo. |
 
 ---
+
+### CDU004.6 – Dashboard Visualización
+
+| **CAMPO** | **DETALLE** |
+| --------- | ----------- |
+| Nombre | Dashboard Visualización |
+| Código | CDU004.6 |
+| Actores | No aplica (Invocado por CDU004.1 y CDU004.2) |
+| Descripción | Interfaz gráfica interactiva que renderiza los datos operativos en tiempo real. Permite la visualización dinámica de métricas mediante gráficos de barras, indicadores de aguja (gauges) y mapas de calor para facilitar la interpretación del Supervisor Operativo. |
+| Precondiciones | El sistema debe haber procesado los datos del Corte Diario o el cálculo de KPIs. |
+| Post Condiciones | Representación visual de los datos desplegada en pantalla. |
+| Reglas de negocio | Los datos deben refrescarse automáticamente cada 5 minutos mientras la sesión esté activa. Solo se permite la visualización de datos correspondientes al rol del usuario. |
+| Reglas de calidad | El tiempo de renderizado de los gráficos no debe exceder los 2 segundos tras la carga de datos. |
+
+---
+
+### CDU004.7 – Datos Históricos
+
+| **CAMPO** | **DETALLE** |
+| --------- | ----------- |
+| Nombre | Consulta de Datos Históricos |
+| Código | CDU004.7 |
+| Actores | No aplica (Invocado por CDU004.3, CDU004.4 y CDU004.5) |
+| Descripción | Módulo de inteligencia de negocios encargado de extraer y procesar registros almacenados en la base de datos histórica (mínimo de 24 meses). Provee la materia prima para los análisis de rentabilidad, detección de desviaciones y proyecciones de capacidad. |
+| Precondiciones | Existencia de registros cerrados en el historial de órdenes y facturación. |
+| Post Condiciones | Conjunto de datos procesado y entregado al caso de uso solicitante. |
+| Reglas de negocio | Para no afectar la operación en vivo, las consultas deben realizarse sobre una réplica de lectura de la base de datos. Se debe garantizar la integridad de los datos históricos (no modificables). |
+| Reglas de calidad | El procesamiento de grandes volúmenes de datos para proyecciones no debe bloquear otras funciones del sistema. |
+
+---
+
+### CDU004.8 – Exportar Reporte
+
+| **CAMPO** | **DETALLE** |
+| --------- | ----------- |
+| Nombre | Exportar Reporte |
+| Código | CDU004.8 |
+| Actores | No aplica (Invocado por CDU004.3 y CDU004.5) |
+| Descripción | Funcionalidad que permite convertir los resultados de los análisis gerenciales y proyecciones en archivos digitales descargables, facilitando su distribución fuera de la plataforma o para presentaciones de junta directiva. |
+| Precondiciones | El reporte o análisis debe estar generado y visualizado previamente en pantalla. |
+| Post Condiciones | Archivo descargado en el dispositivo del usuario. |
+| Reglas de negocio | Los formatos de exportación permitidos son PDF (para reportes de solo lectura) y XLSX (para análisis de rentabilidad que requieran manipulación de celdas). Todo documento exportado debe incluir el logo de LogiTrans y un sello de agua de "Confidencial". |
+| Reglas de calidad | El archivo generado debe mantener la fidelidad de los datos mostrados en la interfaz web. |
 
 5. MATRICES DE TRAZABILIDAD
 

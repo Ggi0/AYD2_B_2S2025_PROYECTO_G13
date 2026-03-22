@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { FaTruck, FaEye, FaEyeSlash, FaMapMarkerAlt, FaShieldAlt, FaClock } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/principal/MainLayout';
+import { loginRequest } from '../../services/auth/authApi';
+import { useAuth } from '../../context/AuthContext';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { setSession } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,19 +30,23 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // Simulación de login - aquí iría la llamada real al backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Validación simple de ejemplo
-      if (formData.email && formData.password.length >= 6) {
-        console.log('Login exitoso:', formData.email);
-        alert('Login exitoso - Redirigiendo al dashboard');
-        // Aquí iría la redirección según el rol
-      } else {
-        setError('Credenciales inválidas. Verifica tu email y contraseña.');
-      }
-    } catch (error) {
-      setError('Error de conexión. Por favor, intenta nuevamente.');
+      const response = await loginRequest({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      setSession(response.data.token, {
+        id: response.data.user.id,
+        email: response.data.user.email,
+        role: response.data.user.role,
+      });
+
+      navigate('/panel');
+    } catch (error: unknown) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Error de conexión. Por favor, intenta nuevamente.';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

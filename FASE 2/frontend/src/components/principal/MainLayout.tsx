@@ -1,6 +1,7 @@
 import React from 'react';
 import { FaTruck, FaSignInAlt, FaUserPlus } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +10,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, logout } = useAuth();
 
   const handleLogin = () => {
     navigate('/login');
@@ -20,6 +22,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   const handleLogoClick = () => {
     navigate('/');
+  };
+
+  const handleGoPanel = () => {
+    navigate('/panel');
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   // Determinar qué botones mostrar según la ruta actual
@@ -49,10 +60,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
             {/* Botones de navegación */}
             <div className="flex items-center space-x-4">
+              {isAuthenticated && (
+                <>
+                  <button
+                    onClick={handleGoPanel}
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Panel
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition"
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              )}
+
               {isHomePage && (
                 <>
                   <button
                     onClick={handleLogin}
+                    disabled={isAuthenticated}
                     className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition"
                   >
                     <FaSignInAlt />
@@ -60,6 +89,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                   </button>
                   <button
                     onClick={handleRegister}
+                    disabled={isAuthenticated}
                     className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition"
                   >
                     <FaUserPlus />
@@ -72,6 +102,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <>
                   <button
                     onClick={handleRegister}
+                    disabled={isAuthenticated}
                     className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white px-4 py-2 rounded-lg transition"
                   >
                     <FaUserPlus />
@@ -90,6 +121,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <>
                   <button
                     onClick={handleLogin}
+                    disabled={isAuthenticated}
                     className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg transition"
                   >
                     <FaSignInAlt />

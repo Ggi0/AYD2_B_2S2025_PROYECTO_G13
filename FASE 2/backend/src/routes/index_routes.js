@@ -11,6 +11,7 @@ router.get('/', (req, res) => {
 
 // Importar rutas por módulo
 const facturacionRoutes = require('./facturacion/routes_factuacion');
+const authRoutes = require('./auth/auth.routes');
 
 // otras carpetas por ejemplo:
 // const contratosRoutes = require('./contratos/routes_contratos');
@@ -19,6 +20,7 @@ const facturacionRoutes = require('./facturacion/routes_factuacion');
 // Convención general:
 // /api/funcion
 router.use('/facturacion', facturacionRoutes);
+router.use('/auth', authRoutes);
 //  /api/contratos
 //  router.use('/contratos', contratosRoutes);
 

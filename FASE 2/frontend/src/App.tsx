@@ -1,11 +1,15 @@
 // src/App.tsx
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Principal from './pages/Principal/Principal';
 import TiposRegistro from './pages/Registro/TiposRegistro';
 import Login from './pages/Principal/Login';
 import PrincipalClient from './pages/client/PrincipalClient';
 import ClientContracts from './pages/client/ClientContracts';
+import PanelPrivado from './pages/Principal/PanelPrivado';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
 // Componente para proteger rutas de clientes
 const ClientRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -74,6 +78,23 @@ function App() {
         />
       </Routes>
     </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<Principal />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro/tipos" element={<TiposRegistro />} />
+          <Route
+            path="/panel"
+            element={(
+              <ProtectedRoute>
+                <PanelPrivado />
+              </ProtectedRoute>
+            )}
+          />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

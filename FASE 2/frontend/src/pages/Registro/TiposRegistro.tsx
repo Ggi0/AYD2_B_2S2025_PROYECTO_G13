@@ -1,25 +1,90 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { FaUser, FaTruck, FaUserTie, FaMapMarkerAlt, FaFileInvoice, FaShieldAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../components/principal/MainLayout';
+import { registerRequest } from '../../services/auth/authApi';
 
 const TiposRegistro: React.FC = () => {
   const navigate = useNavigate();
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    nombres: '',
+    apellidos: '',
+    telefono: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  });
 
-  const handleClienteClick = () => {
-    alert('Registro como Cliente - En desarrollo');
-    // Aquí iría la navegación al formulario de registro de cliente
+  const roleLabel = useMemo(() => {
+    if (selectedRole === 'cliente') return 'Cliente';
+    if (selectedRole === 'piloto') return 'Piloto';
+    if (selectedRole === 'finanzas') return 'Finanzas';
+    return '';
+  }, [selectedRole]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
-  const handlePilotoClick = () => {
-    alert('Registro como Piloto - En desarrollo');
-    // Aquí iría la navegación al formulario de registro de piloto
+  const handleRoleSelect = (role: string) => {
+    setSelectedRole(role);
+    setError(null);
+    setSuccess(null);
   };
 
-  const handleAdminClick = () => {
-    alert('Registro como Administrador - En desarrollo');
-    // Aquí iría la navegación al formulario de registro de administrador
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedRole) {
+      setError('Selecciona un tipo de cuenta antes de registrarte.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await registerRequest({
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        role: selectedRole,
+        nombres: formData.nombres,
+        apellidos: formData.apellidos,
+        telefono: formData.telefono,
+      });
+
+      setSuccess(`${response.mensaje} Ahora puedes iniciar sesión.`);
+      setFormData({
+        nombres: '',
+        apellidos: '',
+        telefono: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'No se pudo completar el registro.';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleClienteClick = () => handleRoleSelect('cliente');
+
+  const handlePilotoClick = () => handleRoleSelect('piloto');
+
+  const handleAdminClick = () => handleRoleSelect('finanzas');
 
   const handleLoginClick = () => {
     navigate('/login');
@@ -173,6 +238,86 @@ const TiposRegistro: React.FC = () => {
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="max-w-3xl mx-auto mt-12 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 md:p-8">
+            <h3 className="text-2xl font-bold text-white mb-2">Formulario de Registro</h3>
+            <p className="text-sm text-gray-300 mb-6">
+              {selectedRole ? `Tipo de cuenta seleccionado: ${roleLabel}` : 'Selecciona arriba un tipo de cuenta para continuar.'}
+            </p>
+
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-200 text-sm">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="mb-4 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-emerald-200 text-sm">
+                {success}
+              </div>
+            )}
+
+            <form onSubmit={handleRegisterSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                name="nombres"
+                value={formData.nombres}
+                onChange={handleInputChange}
+                placeholder="Nombres"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+              <input
+                name="apellidos"
+                value={formData.apellidos}
+                onChange={handleInputChange}
+                placeholder="Apellidos"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+              <input
+                name="telefono"
+                value={formData.telefono}
+                onChange={handleInputChange}
+                placeholder="Teléfono"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+              <input
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleInputChange}
+                placeholder="Correo electrónico"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+              <input
+                name="password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Contraseña"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Confirmar contraseña"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
+
+              <div className="md:col-span-2 mt-2">
+                <button
+                  type="submit"
+                  disabled={isLoading || !selectedRole}
+                  className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900/60 text-white font-semibold py-3 transition"
+                >
+                  {isLoading ? 'Registrando...' : 'Crear cuenta'}
+                </button>
+              </div>
+            </form>
           </div>
 
           {/* Features adicionales */}

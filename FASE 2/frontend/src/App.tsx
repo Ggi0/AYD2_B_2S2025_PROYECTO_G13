@@ -1,8 +1,27 @@
+// src/App.tsx
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Principal from './pages/Principal/Principal';
 import TiposRegistro from './pages/Registro/TiposRegistro';
 import Login from './pages/Principal/Login';
+import PrincipalClient from './pages/client/PrincipalClient';
+import ClientContracts from './pages/client/ClientContracts';
+
+// Componente para proteger rutas de clientes
+const ClientRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const token = localStorage.getItem('userToken');
+  const userRole = localStorage.getItem('userRole');
+  
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (userRole !== 'client') {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
 
 function App() {
   return (
@@ -11,6 +30,48 @@ function App() {
         <Route path="/" element={<Principal />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro/tipos" element={<TiposRegistro />} />
+        
+        {/* Rutas del cliente  */}
+        <Route 
+          path="/client/dashboard" 
+          element={
+            <ClientRoute>
+              <PrincipalClient />
+            </ClientRoute>
+          } 
+        />
+        <Route 
+          path="/client/contracts" 
+          element={
+            <ClientRoute>
+              <ClientContracts />
+            </ClientRoute>
+          } 
+        />
+        <Route 
+          path="/client/orders" 
+          element={
+            <ClientRoute>
+              <div>Órdenes de Servicio - Próximamente</div>
+            </ClientRoute>
+          } 
+        />
+        <Route 
+          path="/client/invoices" 
+          element={
+            <ClientRoute>
+              <div>Mis Facturas - Próximamente</div>
+            </ClientRoute>
+          } 
+        />
+        <Route 
+          path="/client/payments" 
+          element={
+            <ClientRoute>
+              <div>Mis Pagos - Próximamente</div>
+            </ClientRoute>
+          } 
+        />
       </Routes>
     </Router>
   );

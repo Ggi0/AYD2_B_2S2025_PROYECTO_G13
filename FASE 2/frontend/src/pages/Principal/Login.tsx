@@ -1,3 +1,4 @@
+// src/pages/Principal/Login.tsx (actualizado con las rutas correctas)
 import React, { useState } from 'react';
 import { FaTruck, FaEye, FaEyeSlash, FaMapMarkerAlt, FaShieldAlt, FaClock } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +14,28 @@ const Login: React.FC = () => {
     password: ''
   });
 
+  // Credenciales de ejemplo para diferentes roles con rutas CORREGIDAS
+  const users = {
+    client: {
+      email: 'cliente@logitrans.com',
+      password: 'cliente123',
+      role: 'client',
+      redirect: '/client/dashboard'  // Ruta CORREGIDA
+    },
+    admin: {
+      email: 'admin@logitrans.com',
+      password: 'admin123',
+      role: 'admin',
+      redirect: '/admin/dashboard'
+    },
+    operator: {
+      email: 'operador@logitrans.com',
+      password: 'operador123',
+      role: 'operator',
+      redirect: '/operator/dashboard'
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -27,14 +50,33 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // Simulación de login - aquí iría la llamada real al backend
+      // Simulación de llamada al backend
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Validación simple de ejemplo
-      if (formData.email && formData.password.length >= 6) {
-        console.log('Login exitoso:', formData.email);
-        alert('Login exitoso - Redirigiendo al dashboard');
-        // Aquí iría la redirección según el rol
+      // Validación de credenciales
+      let userFound = null;
+      
+      for (const [key, user] of Object.entries(users)) {
+        if (formData.email === user.email && formData.password === user.password) {
+          userFound = user;
+          break;
+        }
+      }
+      
+      if (userFound) {
+        console.log('Login exitoso:', formData.email, 'Rol:', userFound.role);
+        
+        // Guardar información de sesión
+        localStorage.setItem('userToken', 'fake-jwt-token-' + Date.now());
+        localStorage.setItem('userRole', userFound.role);
+        localStorage.setItem('userEmail', formData.email);
+        
+        // Mostrar mensaje de éxito
+        alert(`¡Bienvenido! Redirigiendo al dashboard de ${userFound.role}`);
+        
+        // Redirigir según el rol con las rutas CORREGIDAS
+        console.log('Redirigiendo a:', userFound.redirect);
+        navigate(userFound.redirect);
       } else {
         setError('Credenciales inválidas. Verifica tu email y contraseña.');
       }
@@ -54,14 +96,10 @@ const Login: React.FC = () => {
       <div className="min-h-[calc(100vh-80px)] grid grid-cols-1 md:grid-cols-12 relative overflow-hidden">
         {/* Columna izquierda - Formulario */}
         <div className="col-span-1 md:col-span-5 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 text-white p-8 md:p-12 relative">
-          {/* DEGRADADO MUY NOTORIO hacia la derecha */}
           <div className="absolute top-0 right-0 bottom-0 w-32 md:w-48 bg-gradient-to-l from-blue-900 via-blue-900/80 to-transparent z-10"></div>
-
-          {/* Segundo degradado interno para más efecto */}
           <div className="absolute top-0 right-0 bottom-0 w-64 md:w-96 bg-gradient-to-l from-blue-900/60 via-blue-900/20 to-transparent z-5 blur-sm"></div>
 
           <div className="h-full flex flex-col justify-center max-w-md mx-auto relative z-20">
-            {/* Logo */}
             <div className="mb-12">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg">
@@ -75,9 +113,15 @@ const Login: React.FC = () => {
 
               <h2 className="text-4xl font-bold mt-8">Iniciar Sesión</h2>
               <p className="text-blue-200 mt-3">Accede al sistema de gestión logística</p>
+              
+              <div className="mt-4 p-3 bg-blue-800/30 rounded-lg text-xs">
+                <p className="text-blue-200 font-semibold">Credenciales de prueba:</p>
+                <p className="text-blue-100 mt-1">Cliente: cliente@logitrans.com / cliente123</p>
+                <p className="text-blue-100">Admin: admin@logitrans.com / admin123</p>
+                <p className="text-blue-100">Operador: operador@logitrans.com / operador123</p>
+              </div>
             </div>
 
-            {/* Mensaje de Error */}
             {error && (
               <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 rounded-xl">
                 <div className="flex items-center gap-2">
@@ -89,9 +133,7 @@ const Login: React.FC = () => {
               </div>
             )}
 
-            {/* Formulario */}
             <form className="space-y-8" onSubmit={handleSubmit}>
-              {/* Campo Email */}
               <div>
                 <label className="block text-sm font-medium mb-3 text-blue-100">
                   Correo electrónico
@@ -115,7 +157,6 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Campo Contraseña */}
               <div>
                 <label className="block text-sm font-medium mb-3 text-blue-100">
                   Contraseña
@@ -147,7 +188,6 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botón de Login */}
               <button
                 type="submit"
                 disabled={isLoading}
@@ -164,7 +204,6 @@ const Login: React.FC = () => {
               </button>
             </form>
 
-            {/* Enlace a registro */}
             <div className="mt-12 pt-8 border-t border-blue-700/50">
               <p className="text-center text-blue-200">
                 ¿No tienes una cuenta?{' '}
@@ -181,28 +220,21 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Columna derecha - Imagen */}
         <div className="col-span-1 md:col-span-7 relative min-h-[400px] md:min-h-[calc(100vh-80px)]">
-          {/* Degradado desde la izquierda */}
           <div className="absolute top-0 left-0 bottom-0 w-32 md:w-48 bg-gradient-to-r from-blue-900/90 via-blue-900/70 to-transparent z-10"></div>
-
-          {/* Segundo degradado */}
           <div className="absolute top-0 left-0 bottom-0 w-64 md:w-96 bg-gradient-to-r from-blue-900/60 via-blue-900/30 to-transparent z-5 blur-sm"></div>
 
-          {/* Imagen de fondo */}
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
               backgroundImage: "url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
             }}
           >
-            {/* Overlays de gradiente */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-900/70 via-blue-900/40 to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-transparent to-blue-900/30"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent"></div>
           </div>
 
-          {/* Contenido sobre la imagen */}
           <div className="relative z-20 h-full flex flex-col justify-end p-8 md:p-12 text-white">
             <div className="max-w-xl">
               <h3 className="text-3xl md:text-4xl font-bold mb-4 drop-shadow-2xl">
@@ -212,7 +244,6 @@ const Login: React.FC = () => {
                 Control total de tus operaciones logísticas. Órdenes, facturación y reportes en un solo lugar.
               </p>
 
-              {/* Features */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8">
                 <div className="flex items-start gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
                   <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
@@ -258,7 +289,6 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            {/* Indicadores */}
             <div className="flex items-center gap-3 mt-8">
               <div className="w-4 h-4 rounded-full bg-white shadow-lg animate-pulse"></div>
               <div className="w-3 h-3 rounded-full bg-white/60"></div>
@@ -267,7 +297,6 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        {/* Línea divisoria vertical */}
         <div className="absolute top-1/2 left-5/12 transform -translate-y-1/2 w-1 h-3/4 bg-gradient-to-b from-transparent via-blue-300/30 to-transparent z-30 hidden md:block"></div>
       </div>
     </MainLayout>

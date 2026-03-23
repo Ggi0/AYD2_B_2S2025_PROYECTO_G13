@@ -11,6 +11,7 @@ const TiposRegistro: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    nit: '',
     nombres: '',
     apellidos: '',
     telefono: '',
@@ -54,6 +55,7 @@ const TiposRegistro: React.FC = () => {
 
     try {
       const response = await registerRequest({
+        nit: formData.nit,
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
@@ -65,6 +67,7 @@ const TiposRegistro: React.FC = () => {
 
       setSuccess(`${response.mensaje} Ahora puedes iniciar sesión.`);
       setFormData({
+        nit: '',
         nombres: '',
         apellidos: '',
         telefono: '',
@@ -259,6 +262,14 @@ const TiposRegistro: React.FC = () => {
             )}
 
             <form onSubmit={handleRegisterSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <input
+                name="nit"
+                required
+                value={formData.nit}
+                onChange={handleInputChange}
+                placeholder="NIT"
+                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
+              />
               <input
                 name="nombres"
                 value={formData.nombres}

@@ -17,28 +17,6 @@ const Login: React.FC = () => {
     password: ''
   });
 
-  // Credenciales de ejemplo para diferentes roles con rutas CORREGIDAS
-  const users = {
-    client: {
-      email: 'cliente@logitrans.com',
-      password: 'cliente123',
-      role: 'client',
-      redirect: '/client/dashboard'  // Ruta CORREGIDA
-    },
-    admin: {
-      email: 'admin@logitrans.com',
-      password: 'admin123',
-      role: 'admin',
-      redirect: '/admin/dashboard'
-    },
-    operator: {
-      email: 'operador@logitrans.com',
-      password: 'operador123',
-      role: 'operator',
-      redirect: '/operator/dashboard'
-    }
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -53,38 +31,6 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // Simulación de llamada al backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Validación de credenciales
-      let userFound = null;
-      
-      for (const [key, user] of Object.entries(users)) {
-        if (formData.email === user.email && formData.password === user.password) {
-          userFound = user;
-          break;
-        }
-      }
-      
-      if (userFound) {
-        console.log('Login exitoso:', formData.email, 'Rol:', userFound.role);
-        
-        // Guardar información de sesión
-        localStorage.setItem('userToken', 'fake-jwt-token-' + Date.now());
-        localStorage.setItem('userRole', userFound.role);
-        localStorage.setItem('userEmail', formData.email);
-        
-        // Mostrar mensaje de éxito
-        alert(`¡Bienvenido! Redirigiendo al dashboard de ${userFound.role}`);
-        
-        // Redirigir según el rol con las rutas CORREGIDAS
-        console.log('Redirigiendo a:', userFound.redirect);
-        navigate(userFound.redirect);
-      } else {
-        setError('Credenciales inválidas. Verifica tu email y contraseña.');
-      }
-    } catch (error) {
-      setError('Error de conexión. Por favor, intenta nuevamente.');
       const response = await loginRequest({
         email: formData.email,
         password: formData.password,
@@ -133,13 +79,6 @@ const Login: React.FC = () => {
 
               <h2 className="text-4xl font-bold mt-8">Iniciar Sesión</h2>
               <p className="text-blue-200 mt-3">Accede al sistema de gestión logística</p>
-              
-              <div className="mt-4 p-3 bg-blue-800/30 rounded-lg text-xs">
-                <p className="text-blue-200 font-semibold">Credenciales de prueba:</p>
-                <p className="text-blue-100 mt-1">Cliente: cliente@logitrans.com / cliente123</p>
-                <p className="text-blue-100">Admin: admin@logitrans.com / admin123</p>
-                <p className="text-blue-100">Operador: operador@logitrans.com / operador123</p>
-              </div>
             </div>
 
             {error && (

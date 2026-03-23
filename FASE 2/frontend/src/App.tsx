@@ -1,7 +1,5 @@
-// src/App.tsx
-import React from 'react';
+import { type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Principal from './pages/Principal/Principal';
 import TiposRegistro from './pages/Registro/TiposRegistro';
 import Login from './pages/Principal/Login';
@@ -12,7 +10,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
 // Componente para proteger rutas de clientes
-const ClientRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const ClientRoute = ({ children }: { children: ReactNode }) => {
   const token = localStorage.getItem('userToken');
   const userRole = localStorage.getItem('userRole');
   
@@ -29,61 +27,52 @@ const ClientRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Principal />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/registro/tipos" element={<TiposRegistro />} />
-        
-        {/* Rutas del cliente  */}
-        <Route 
-          path="/client/dashboard" 
-          element={
-            <ClientRoute>
-              <PrincipalClient />
-            </ClientRoute>
-          } 
-        />
-        <Route 
-          path="/client/contracts" 
-          element={
-            <ClientRoute>
-              <ClientContracts />
-            </ClientRoute>
-          } 
-        />
-        <Route 
-          path="/client/orders" 
-          element={
-            <ClientRoute>
-              <div>Órdenes de Servicio - Próximamente</div>
-            </ClientRoute>
-          } 
-        />
-        <Route 
-          path="/client/invoices" 
-          element={
-            <ClientRoute>
-              <div>Mis Facturas - Próximamente</div>
-            </ClientRoute>
-          } 
-        />
-        <Route 
-          path="/client/payments" 
-          element={
-            <ClientRoute>
-              <div>Mis Pagos - Próximamente</div>
-            </ClientRoute>
-          } 
-        />
-      </Routes>
-    </Router>
     <AuthProvider>
       <Router>
         <Routes>
           <Route path="/" element={<Principal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro/tipos" element={<TiposRegistro />} />
+          <Route
+            path="/client/dashboard"
+            element={
+              <ClientRoute>
+                <PrincipalClient />
+              </ClientRoute>
+            }
+          />
+          <Route
+            path="/client/contracts"
+            element={
+              <ClientRoute>
+                <ClientContracts />
+              </ClientRoute>
+            }
+          />
+          <Route
+            path="/client/orders"
+            element={
+              <ClientRoute>
+                <div>Ordenes de Servicio - Proximamente</div>
+              </ClientRoute>
+            }
+          />
+          <Route
+            path="/client/invoices"
+            element={
+              <ClientRoute>
+                <div>Mis Facturas - Proximamente</div>
+              </ClientRoute>
+            }
+          />
+          <Route
+            path="/client/payments"
+            element={
+              <ClientRoute>
+                <div>Mis Pagos - Proximamente</div>
+              </ClientRoute>
+            }
+          />
           <Route
             path="/panel"
             element={(

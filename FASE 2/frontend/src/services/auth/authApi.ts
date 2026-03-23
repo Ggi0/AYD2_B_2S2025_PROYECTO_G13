@@ -12,6 +12,7 @@ export type AuthUser = {
 };
 
 type RegisterPayload = {
+  nit: string;
   email: string;
   password: string;
   confirmPassword: string;

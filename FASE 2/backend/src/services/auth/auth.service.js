@@ -30,6 +30,7 @@ function getDisplayName(user) {
 
 async function register(payload) {
   const {
+    nit,
     email,
     password,
     confirmPassword,
@@ -39,8 +40,12 @@ async function register(payload) {
     telefono = "",
   } = payload;
 
-  if (!email || !password || !confirmPassword) {
-    throw createHttpError("Email, password y confirmPassword son obligatorios", 400);
+  if (!nit || !email || !password || !confirmPassword) {
+    throw createHttpError("NIT, email, password y confirmPassword son obligatorios", 400);
+  }
+
+  if (String(nit).trim().length > 13) {
+    throw createHttpError("El NIT no puede tener más de 13 caracteres", 400);
   }
 
   if (!validateEmail(email)) {
@@ -60,13 +65,14 @@ async function register(payload) {
     throw createHttpError("Rol no permitido", 400);
   }
 
-  const existingUser = userStore.findByEmail(email.toLowerCase());
+  const existingUser = await userStore.findByEmail(email.toLowerCase());
   if (existingUser) {
     throw createHttpError("El email ya se encuentra registrado", 409);
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user = userStore.createUser({
+  const user = await userStore.createUser({
+    nit: String(nit).trim(),
     email: email.toLowerCase(),
     passwordHash,
     role: finalRole,
@@ -99,6 +105,7 @@ async function register(payload) {
     mensaje: "Usuario registrado correctamente",
     data: {
       id: user.id,
+      nit: user.nit,
       email: user.email,
       role: user.role,
       nombres: user.nombres,
@@ -119,9 +126,13 @@ async function login(payload) {
     throw createHttpError("Formato de email invalido", 400);
   }
 
-  const user = userStore.findByEmail(email.toLowerCase());
+  const user = await userStore.findByEmail(email.toLowerCase());
   if (!user) {
     throw createHttpError("Credenciales invalidas", 401);
+  }
+
+  if (String(user.estado || "").toUpperCase() !== "ACTIVO") {
+    throw createHttpError("El usuario no está activo", 403);
   }
 
   const isValidPassword = await bcrypt.compare(password, user.passwordHash);

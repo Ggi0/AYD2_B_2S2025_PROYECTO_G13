@@ -1,6 +1,6 @@
 // src/pages/client/PrincipalClient.tsx
 import React, { useState } from 'react';
-import { FaChartLine, FaTruck, FaFileInvoiceDollar, FaCreditCard } from 'react-icons/fa';
+import { FaTruck, FaFileInvoiceDollar, FaCreditCard } from 'react-icons/fa';
 import MainLayout from '../../components/principal/MainLayout';
 import ClientHeader from '../../components/client/ClientHeader';
 import ClientMenu from '../../components/client/ClientMenu';

@@ -17,10 +17,18 @@ const authRoutes = require('./auth/auth.routes');
 // const contratosRoutes = require('./contratos/routes_contratos');
 
 
+const usuarioRoutes   = require('./usuarios/usuarioRoutes');
+const contratoRoutes  = require('./contratos/contratoRoutes');
+const tarifarioRoutes = require('./tarifario/tarifarioRoutes');
+
+
 // Convención general:
 // /api/funcion
 router.use('/facturacion', facturacionRoutes);
 router.use('/auth', authRoutes);
+router.use('/usuarios',    usuarioRoutes);
+router.use('/contratos',   contratoRoutes);
+router.use('/tarifario',   tarifarioRoutes);
 //  /api/contratos
 //  router.use('/contratos', contratosRoutes);
 

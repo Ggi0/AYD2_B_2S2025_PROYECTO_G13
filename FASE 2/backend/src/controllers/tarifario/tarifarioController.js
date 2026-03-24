@@ -24,7 +24,7 @@ const actualizarTarifa = async (req, res) => {
   try {
     const { tipo_unidad }  = req.params;
     const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
+    const usuario_ejecutor  = req.user ? Number(req.user.sub) : null;
     const ip               = req.ip;
 
     if (!datos.limite_peso_ton || !datos.costo_base_km) {

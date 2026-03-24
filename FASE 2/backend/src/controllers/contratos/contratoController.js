@@ -3,9 +3,9 @@ const contratoService = require('../../services/contratos/contratoService');
 
 const crearContrato = async (req, res) => {
   try {
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     const camposObligatorios = ['numero_contrato', 'cliente_id', 'fecha_inicio', 'fecha_fin', 'limite_credito', 'plazo_pago'];
     for (const campo of camposObligatorios) {
@@ -41,10 +41,10 @@ const listarContratosPorCliente = async (req, res) => {
 
 const modificarContrato = async (req, res) => {
   try {
-    const { id }           = req.params;
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const { id }          = req.params;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     const contratoActualizado = await contratoService.modificarContrato(Number(id), datos, usuario_ejecutor, ip);
     res.status(200).json({ ok: true, mensaje: 'Contrato actualizado correctamente', data: contratoActualizado });
@@ -67,10 +67,10 @@ const validarCliente = async (req, res) => {
 
 const agregarDescuento = async (req, res) => {
   try {
-    const { id }           = req.params;
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const { id }          = req.params;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     if (!datos.tipo_unidad || !datos.porcentaje_descuento) {
       return res.status(400).json({ ok: false, mensaje: 'Los campos tipo_unidad y porcentaje_descuento son obligatorios' });
@@ -85,10 +85,10 @@ const agregarDescuento = async (req, res) => {
 
 const agregarRuta = async (req, res) => {
   try {
-    const { id }           = req.params;
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const { id }          = req.params;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     if (!datos.origen || !datos.destino) {
       return res.status(400).json({ ok: false, mensaje: 'Los campos origen y destino son obligatorios' });

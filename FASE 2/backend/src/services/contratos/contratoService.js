@@ -1,4 +1,18 @@
-// services/contratos/contratoService.js
+/**
+ * @file Servicio de Contratos
+ * @description Lógica de negocio para gestión completa de contratos de transporte
+ * Incluye creación, modificación, validación, asignación de tarifas, descuentos y rutas
+ * Genera registros de auditoría para todas las operaciones
+ * @module services/contratos/contratoService
+ * @version 1.0.0
+ * @requires models/contratos/Contrato - modelo de contrato
+ * @requires models/contratos/ContratoTarifa - tipos de unidad por contrato
+ * @requires models/contratos/Descuento - descuentos especiales
+ * @requires models/contratos/RutaAutorizada - rutas permitidas
+ * @requires models/usuarios/Usuario - validaciones de cliente
+ * @requires models/auditoria/Auditoria - registro de cambios
+ */
+
 const Contrato       = require('../../models/contratos/Contrato');
 const ContratoTarifa = require('../../models/contratos/ContratoTarifa');
 const Descuento      = require('../../models/contratos/Descuento');
@@ -6,6 +20,25 @@ const RutaAutorizada = require('../../models/contratos/RutaAutorizada');
 const Usuario        = require('../../models/usuarios/Usuario');
 const Auditoria      = require('../../models/auditoria/Auditoria');
 
+/**
+ * @async
+ * @function crearContrato
+ * @description Crea un nuevo contrato de transporte para un cliente corporativo
+ * Valida cliente activo, plazo de pago, fechas, y crea tarifas/rutas si se proporcionan
+ * @param {Object} datos - Datos del contrato
+ * @param {string} datos.numero_contrato - Número identificador único del contrato
+ * @param {number} datos.cliente_id - ID del cliente corporativo
+ * @param {string} datos.fecha_inicio - Fecha de inicio (YYYY-MM-DD)
+ * @param {string} datos.fecha_fin - Fecha de finalización (debe ser > fecha_inicio)
+ * @param {number} datos.limite_credito - Límite de crédito permitido en soles
+ * @param {number} datos.plazo_pago - Plazo de pago: 15, 30 o 45 días
+ * @param {Array} [datos.tarifas] - Tarifas del contrato por tipo de unidad
+ * @param {Array} [datos.rutas] - Rutas autorizadas del contrato
+ * @param {number} usuario_ejecutor - ID del usuario que crea el contrato (para auditoría)
+ * @param {string} ip - Dirección IP del cliente (para auditoría)
+ * @returns {Promise<Object>} Contrato creado con todos sus datos
+ * @throws {Error} Si cliente no existe, no es corporativo, inactivo o datos inválidos
+ */
 const crearContrato = async (datos, usuario_ejecutor, ip) => {
   const { numero_contrato, cliente_id, fecha_inicio, fecha_fin, limite_credito, plazo_pago, tarifas, rutas } = datos;
 
@@ -56,6 +89,15 @@ const crearContrato = async (datos, usuario_ejecutor, ip) => {
   return contrato;
 };
 
+/**
+ * @async
+ * @function obtenerContrato
+ * @description Obtiene los detalles completos de un contrato
+ * Retorna contrato con sus tarifas, rutas autorizadas y descuentos especiales
+ * @param {number} id - ID del contrato a obtener
+ * @returns {Promise<Object>} Contrato con tarifas, rutas y descuentos embebidos
+ * @throws {Error} Si contrato no existe (404)
+ */
 const obtenerContrato = async (id) => {
   const contrato = await Contrato.buscarPorId(id);
   if (!contrato) throw { status: 404, mensaje: 'Contrato no encontrado' };
@@ -67,12 +109,32 @@ const obtenerContrato = async (id) => {
   return contrato;
 };
 
+/**
+ * @async
+ * @function listarContratosPorCliente
+ * @description Lista todos los contratos de un cliente específico
+ * @param {number} cliente_id - ID del cliente
+ * @returns {Promise<Array>} Lista de contratos del cliente
+ * @throws {Error} Si cliente no existe (404)
+ */
 const listarContratosPorCliente = async (cliente_id) => {
   const cliente = await Usuario.buscarPorId(cliente_id);
   if (!cliente) throw { status: 404, mensaje: 'Cliente no encontrado' };
   return await Contrato.listarPorCliente(cliente_id);
 };
 
+/**
+ * @async
+ * @function modificarContrato
+ * @description Actualiza los términos de un contrato vigente
+ * Solo se pueden modificar contratos en estado VIGENTE
+ * @param {number} id - ID del contrato a modificar
+ * @param {Object} datos - Nuevos datos del contrato (fecha_fin, limite_credito, plazo_pago, etc.)
+ * @param {number} usuario_ejecutor - ID del usuario que modifica (para auditoría)
+ * @param {string} ip - Dirección IP del cliente (para auditoría)
+ * @returns {Promise<Object>} Contrato actualizado
+ * @throws {Error} Si contrato no existe, no está vigente, o plazo_pago es inválido
+ */
 const modificarContrato = async (id, datos, usuario_ejecutor, ip) => {
   const contratoActual = await Contrato.buscarPorId(id);
   if (!contratoActual) throw { status: 404, mensaje: 'Contrato no encontrado' };
@@ -106,6 +168,18 @@ const modificarContrato = async (id, datos, usuario_ejecutor, ip) => {
   return contratoActualizado;
 };
 
+/**
+ * @async
+ * @function validarCliente
+ * @description Valida si un cliente puede realizar transporte
+ * Verifica estado, contrato vigente, límite de crédito, ruta autorizada y tarifa aplicable
+ * @param {number} cliente_id - ID del cliente a validar
+ * @param {string} [origen] - Ciudad/punto de origen del transporte
+ * @param {string} [destino] - Ciudad/punto de destino del transporte
+ * @param {string} [tipo_unidad] - Tipo de unidad (LIGERA, PESADA, CABEZAL)
+ * @returns {Promise<Object>} Objeto con habilitado (boolean), motivo si está deshabilitado, y detalles de cliente/contrato/tarifa si está habilitado
+ * @note Si cliente excede límite de crédito, es bloqueado automáticamente
+ */
 const validarCliente = async (cliente_id, origen, destino, tipo_unidad) => {
   const cliente = await Usuario.buscarPorId(cliente_id);
   if (!cliente) return { habilitado: false, motivo: 'Cliente no encontrado' };
@@ -148,6 +222,20 @@ const validarCliente = async (cliente_id, origen, destino, tipo_unidad) => {
   };
 };
 
+/**
+ * @async
+ * @function agregarDescuento
+ * @description Agrega un descuento especial a un contrato vigente
+ * Descuentos especiales se aplican por tipo de unidad
+ * @param {number} contrato_id - ID del contrato
+ * @param {Object} datos - Datos del descuento
+ * @param {string} datos.tipo_unidad - Tipo de unidad: LIGERA, PESADA, CABEZAL
+ * @param {number} datos.porcentaje_descuento - Porcentaje de descuento (0-100)
+ * @param {number} usuario_ejecutor - ID del usuario que autoriza (para auditoría)
+ * @param {string} ip - Dirección IP del cliente (para auditoría)
+ * @returns {Promise<Object>} Descuento creado
+ * @throws {Error} Si contrato no existe o no está vigente
+ */
 const agregarDescuento = async (contrato_id, datos, usuario_ejecutor, ip) => {
   const contrato = await Contrato.buscarPorId(contrato_id);
   if (!contrato) throw { status: 404, mensaje: 'Contrato no encontrado' };
@@ -170,6 +258,20 @@ const agregarDescuento = async (contrato_id, datos, usuario_ejecutor, ip) => {
   return descuento;
 };
 
+/**
+ * @async
+ * @function agregarRuta
+ * @description Agrega una ruta autorizada a un contrato vigente
+ * Las rutas definen los corredores origen-destino permitidos para transporte
+ * @param {number} contrato_id - ID del contrato
+ * @param {Object} datos - Datos de la ruta
+ * @param {string} datos.origen - Ciudad/punto de origen
+ * @param {string} datos.destino - Ciudad/punto de destino
+ * @param {number} usuario_ejecutor - ID del usuario que autoriza (para auditoría)
+ * @param {string} ip - Dirección IP del cliente (para auditoría)
+ * @returns {Promise<Object>} Ruta creada
+ * @throws {Error} Si contrato no existe o no está vigente
+ */
 const agregarRuta = async (contrato_id, datos, usuario_ejecutor, ip) => {
   const contrato = await Contrato.buscarPorId(contrato_id);
   if (!contrato) throw { status: 404, mensaje: 'Contrato no encontrado' };

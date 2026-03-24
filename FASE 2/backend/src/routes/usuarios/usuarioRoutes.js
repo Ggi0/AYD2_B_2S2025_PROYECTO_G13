@@ -1,6 +1,12 @@
-// routes/usuarios/usuarioRoutes.js
-const express = require('express');
-const router  = express.Router();
+/**
+ * @file usuarioRoutes.js
+ * @description Rutas para la gestión de usuarios del sistema.
+ * Incluye CRUD de usuarios y evaluación de riesgos de clientes.
+ */
+
+const express      = require('express');
+const router       = express.Router();
+const { requireAuth } = require('../../middlewares/auth/auth.middleware');
 const {
   listarUsuarios,
   obtenerUsuario,
@@ -10,24 +16,75 @@ const {
   obtenerRiesgoCliente
 } = require('../../controllers/usuarios/usuarioController');
 
-// GET /api/usuarios?tipo_usuario=X&estado=Y&nombre=Z
-router.get('/', listarUsuarios);
+/**
+ * GET /api/usuarios
+ * @description Lista todos los usuarios con filtros opcionales
+ * @auth Requerida (token JWT)
+ * @query tipo_usuario: string - Filtro por tipo (CLIENTE, ADMIN, OPERADOR)
+ * @query estado: string - Filtro por estado (ACTIVO, INACTIVO, SUSPENDIDO)
+ * @query nombre: string - Búsqueda parcial por nombre
+ * @response {status: 200, data: [usuarios]}
+ */
+router.get('/',    requireAuth, listarUsuarios);
 
-// GET /api/usuarios/:id
-router.get('/:id', obtenerUsuario);
+/**
+ * GET /api/usuarios/:id
+ * @description Obtiene los datos de un usuario específico
+ * @auth Requerida (token JWT)
+ * @params id: number - ID del usuario
+ * @response {status: 200, data: usuario}
+ */
+router.get('/:id', requireAuth, obtenerUsuario);
 
-// PUT /api/usuarios/:id
-router.put('/:id', modificarUsuario);
+/**
+ * PUT /api/usuarios/:id
+ * @description Actualiza los datos de contacto de un usuario
+ * @auth Requerida (token JWT)
+ * @params id: number - ID del usuario
+ * @body {
+ *   nombre: string - Nombre completo
+ *   email: string - Correo electrónico
+ *   telefono: string - Teléfono de contacto
+ * }
+ * @response {status: 200, data: usuarioActualizado}
+ */
+router.put('/:id', requireAuth, modificarUsuario);
 
-// PATCH /api/usuarios/:id/estado
-// Body: { estado, motivo }
-router.patch('/:id/estado', cambiarEstadoUsuario);
+/**
+ * PATCH /api/usuarios/:id/estado
+ * @description Cambia el estado de un usuario (activar/desactivar/suspender)
+ * @auth Requerida (token JWT)
+ * @params id: number - ID del usuario
+ * @body {
+ *   estado: string - Nuevo estado (ACTIVO, INACTIVO, SUSPENDIDO)
+ *   motivo: string - Razón del cambio de estado
+ * }
+ * @response {status: 200, data: { id, nombre, estado }}
+ */
+router.patch('/:id/estado', requireAuth, cambiarEstadoUsuario);
 
-// POST /api/usuarios/:id/riesgo
-// Body: { riesgo_capacidad_pago, riesgo_lavado_dinero, riesgo_aduanas, riesgo_mercancia }
-router.post('/:id/riesgo', crearRiesgoCliente);
+/**
+ * POST /api/usuarios/:id/riesgo
+ * @description Registra una evaluación de riesgo para un cliente
+ * @auth Requerida (token JWT)
+ * @params id: number - ID del usuario/cliente
+ * @body {
+ *   riesgo_capacidad_pago: string - ALTO, MEDIO, BAJO
+ *   riesgo_lavado_dinero: string - ALTO, MEDIO, BAJO
+ *   riesgo_aduanas: string - ALTO, MEDIO, BAJO
+ *   riesgo_mercancia: string - ALTO, MEDIO, BAJO
+ * }
+ * @response {status: 201, data: perfilRiesgo}
+ */
+router.post('/:id/riesgo', requireAuth, crearRiesgoCliente);
 
-// GET /api/usuarios/:id/riesgo
-router.get('/:id/riesgo', obtenerRiesgoCliente);
+/**
+ * GET /api/usuarios/:id/riesgo
+ * @description Obtiene el perfil de riesgo de un cliente
+ * @auth Requerida (token JWT)
+ * @params id: number - ID del usuario/cliente
+ * @response {status: 200, data: perfilRiesgo}
+ */
+router.get('/:id/riesgo', requireAuth, obtenerRiesgoCliente);
 
 module.exports = router;

@@ -1,7 +1,37 @@
-// models/contratos/Contrato.js
-const sql = require('mssql');
-const { getConnection } = require('../../config/database');
+/**
+ * @file Contrato.js
+ * @description Modelo para la gestión de contratos de transporte.
+ * Contiene operaciones CRUD para crear, consultar, actualizar y cambiar estado
+ * de contratos de clientes con límites de crédito y plazos de pago.
+ */
 
+const sql = require('mssql');
+const { getConnection } = require('../../config/db');
+
+/**
+ * Crea un nuevo contrato de transporte para un cliente
+ * @async
+ * @function crearContrato
+ * @param {Object} datos - Datos del nuevo contrato
+ * @param {string} datos.numero_contrato - Número único identificador del contrato
+ * @param {number} datos.cliente_id - ID del cliente propietario del contrato
+ * @param {Date} datos.fecha_inicio - Fecha de inicio del contrato
+ * @param {Date} datos.fecha_fin - Fecha de vencimiento del contrato
+ * @param {number} datos.limite_credito - Límite máximo de crédito disponible
+ * @param {number} datos.plazo_pago - Número de días de plazo para pagar
+ * @param {number} datos.creado_por - ID del usuario que crea el contrato
+ * @returns {Promise<Object>} Contrato creado con ID y timestamps
+ * @example
+ * const contrato = await crearContrato({
+ *   numero_contrato: 'CTR-2026-001',
+ *   cliente_id: 5,
+ *   fecha_inicio: '2026-03-23',
+ *   fecha_fin: '2027-03-23',
+ *   limite_credito: 50000,
+ *   plazo_pago: 30,
+ *   creado_por: 1
+ * });
+ */
 const crearContrato = async (datos) => {
   const {
     numero_contrato, cliente_id, fecha_inicio, fecha_fin,
@@ -29,6 +59,21 @@ const crearContrato = async (datos) => {
   return result.recordset[0];
 };
 
+/**
+ * Busca un contrato por ID con información detallada de usuarios relacionados
+ * @async
+ * @function buscarPorId
+ * @param {number} id - ID del contrato a buscar
+ * @returns {Promise<Object|undefined>} Objeto contrato con propiedades:
+ *   - Campos del contrato
+ *   - {string} cliente_nombre - Nombre del cliente
+ *   - {string} cliente_nit - NIT del cliente
+ *   - {string} creado_por_nombre - Nombre del usuario creador
+ *   - {string} modificado_por_nombre - Nombre del usuario que última vez modificó
+ * @example
+ * const contrato = await buscarPorId(12);
+ * console.log(contrato.cliente_nombre); // "Transportes ABC"
+ */
 const buscarPorId = async (id) => {
   const pool = await getConnection();
   const result = await pool.request()
@@ -48,6 +93,24 @@ const buscarPorId = async (id) => {
   return result.recordset[0];
 };
 
+/**
+ * Lista todos los contratos de un cliente específico ordenados por fecha de creación
+ * @async
+ * @function listarPorCliente
+ * @param {number} cliente_id - ID del cliente a consultar
+ * @returns {Promise<Array>} Array de objetos contrato con propiedades:
+ *   - {number} id - ID del contrato
+ *   - {string} numero_contrato - Número único del contrato
+ *   - {Date} fecha_inicio - Fecha de inicio
+ *   - {Date} fecha_fin - Fecha de vencimiento
+ *   - {string} estado - Estado del contrato (VIGENTE, VENCIDO, etc)
+ *   - {number} limite_credito - Límite de crédito
+ *   - {number} saldo_usado - Saldo utilizado del crédito
+ *   - {number} plazo_pago - Plazo en días
+ *   - {Date} fecha_creacion - Fecha de creación
+ * @example
+ * const contratos = await listarPorCliente(5);
+ */
 const listarPorCliente = async (cliente_id) => {
   const pool = await getConnection();
   const result = await pool.request()
@@ -63,6 +126,24 @@ const listarPorCliente = async (cliente_id) => {
   return result.recordset;
 };
 
+/**
+ * Busca el contrato vigente más reciente de un cliente
+ * @async
+ * @function buscarVigentePorCliente
+ * @param {number} cliente_id - ID del cliente
+ * @returns {Promise<Object|undefined>} Objeto contrato vigente con:
+ *   - {number} id - ID del contrato
+ *   - {string} numero_contrato - Número del contrato
+ *   - {Date} fecha_inicio - Fecha de inicio
+ *   - {Date} fecha_fin - Fecha de vencimiento
+ *   - {string} estado - Estado (VIGENTE)
+ *   - {number} limite_credito - Límite de crédito
+ *   - {number} saldo_usado - Saldo utilizado
+ *   - {number} plazo_pago - Plazo en días
+ *   Retorna undefined si no hay contrato vigente
+ * @example
+ * const contratoVigente = await buscarVigentePorCliente(5);
+ */
 const buscarVigentePorCliente = async (cliente_id) => {
   const pool = await getConnection();
   const result = await pool.request()
@@ -80,6 +161,26 @@ const buscarVigentePorCliente = async (cliente_id) => {
   return result.recordset[0];
 };
 
+/**
+ * Actualiza los datos de un contrato existente
+ * @async
+ * @function actualizarContrato
+ * @param {number} id - ID del contrato a actualizar
+ * @param {Object} datos - Datos a actualizar
+ * @param {Date} datos.fecha_inicio - Nueva fecha de inicio
+ * @param {Date} datos.fecha_fin - Nueva fecha de vencimiento
+ * @param {number} datos.limite_credito - Nuevo límite de crédito
+ * @param {number} datos.plazo_pago - Nuevo plazo de pago en días
+ * @param {string} datos.estado - Nuevo estado del contrato
+ * @param {number} datos.modificado_por - ID del usuario que realiza la modificación
+ * @returns {Promise<Object>} Contrato actualizado con timestamp de modificación
+ * @example
+ * const actualizado = await actualizarContrato(12, {
+ *   limite_credito: 75000,
+ *   estado: 'VIGENTE',
+ *   modificado_por: 1
+ * });
+ */
 const actualizarContrato = async (id, datos) => {
   const {
     fecha_inicio, fecha_fin, limite_credito,
@@ -110,6 +211,19 @@ const actualizarContrato = async (id, datos) => {
   return result.recordset[0];
 };
 
+/**
+ * Actualiza el saldo usado del crédito de un contrato
+ * @async
+ * @function actualizarSaldo
+ * @param {number} id - ID del contrato
+ * @param {number} saldo_usado - Nuevo monto de saldo utilizado
+ * @returns {Promise<Object>} Objeto con:
+ *   - {number} id - ID del contrato
+ *   - {number} saldo_usado - Saldo actualizado
+ *   - {number} limite_credito - Límite de crédito (para referencia)
+ * @example
+ * const saldo = await actualizarSaldo(12, 25000);
+ */
 const actualizarSaldo = async (id, saldo_usado) => {
   const pool = await getConnection();
   const result = await pool.request()
@@ -124,6 +238,18 @@ const actualizarSaldo = async (id, saldo_usado) => {
   return result.recordset[0];
 };
 
+/**
+ * Cambia el estado de un contrato
+ * @async
+ * @function cambiarEstado
+ * @param {number} id - ID del contrato
+ * @param {string} estado - Nuevo estado (VIGENTE, VENCIDO, CANCELADO, etc)
+ * @returns {Promise<Object>} Objeto actualización con:
+ *   - {number} id - ID del contrato
+ *   - {string} estado - Estado actualizado
+ * @example
+ * const cambio = await cambiarEstado(12, 'VENCIDO');
+ */
 const cambiarEstado = async (id, estado) => {
   const pool = await getConnection();
   const result = await pool.request()

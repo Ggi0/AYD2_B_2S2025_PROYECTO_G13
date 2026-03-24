@@ -23,10 +23,10 @@ const obtenerUsuario = async (req, res) => {
 
 const modificarUsuario = async (req, res) => {
   try {
-    const { id }           = req.params;
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const { id }          = req.params;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     const usuarioActualizado = await usuarioService.modificarUsuario(Number(id), datos, usuario_ejecutor, ip);
     res.status(200).json({ ok: true, mensaje: 'Usuario actualizado correctamente', data: usuarioActualizado });
@@ -39,7 +39,7 @@ const cambiarEstadoUsuario = async (req, res) => {
   try {
     const { id }             = req.params;
     const { estado, motivo } = req.body;
-    const usuario_ejecutor    = req.usuario_id;
+    const usuario_ejecutor    = req.user ? Number(req.user.sub) : null;
     const ip                 = req.ip;
 
     if (!estado)  return res.status(400).json({ ok: false, mensaje: 'El campo estado es obligatorio' });
@@ -54,10 +54,10 @@ const cambiarEstadoUsuario = async (req, res) => {
 
 const crearRiesgoCliente = async (req, res) => {
   try {
-    const { id }           = req.params;
-    const datos            = req.body;
-    const usuario_ejecutor  = req.usuario_id;
-    const ip               = req.ip;
+    const { id }          = req.params;
+    const datos           = req.body;
+    const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
+    const ip              = req.ip;
 
     const riesgo = await usuarioService.crearRiesgoCliente(Number(id), datos, usuario_ejecutor, ip);
     res.status(201).json({ ok: true, mensaje: 'Evaluación de riesgo creada correctamente', data: riesgo });

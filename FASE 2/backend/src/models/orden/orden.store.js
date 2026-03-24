@@ -120,7 +120,7 @@ async function obtenerOrdenes() {
         where estado like 'PENDIENTE_PLANIFICACION';`,
   );
 
-  return result;
+  return result.recordset;
 }
 
 async function vehiculoApto(vehiculo_id, peso_estimado) {
@@ -208,6 +208,77 @@ async function getPilotos() {
     `);
   return result.recordset;
 }
+async function formalizarSalidaPatio(ordenId, datos) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("orden_id", sql.Int, ordenId)
+    .input("codigo_verificacion", sql.NVarChar, datos.codigo_orden)
+    .input("peso_real", sql.Decimal(10, 2), datos.peso_real).query(`
+      BEGIN TRANSACTION;
+      BEGIN TRY
+        -- 1. Declarar variables para cálculos y validaciones
+        DECLARE @v_contrato_id INT, @v_vehiculo_id INT, @v_distancia DECIMAL(10,2), 
+                @v_costo_km DECIMAL(10,2), @v_capacidad_max DECIMAL(10,2),
+                @v_costo_anterior DECIMAL(10,2), @v_peso_estimado DECIMAL(10,2);
+
+        -- 2. Obtener contexto de la orden y capacidad del vehículo desde el tarifario
+        SELECT 
+            @v_contrato_id = o.contrato_id,
+            @v_vehiculo_id = o.vehiculo_id,
+            @v_costo_anterior = o.costo,
+            @v_peso_estimado = o.peso_estimado,
+            @v_distancia = r.distancia_km,
+            @v_capacidad_max = t.limite_peso_ton
+        FROM ordenes o
+        INNER JOIN rutas_autorizadas r ON o.contrato_id = r.contrato_id 
+            AND o.origen = r.origen AND o.destino = r.destino
+        INNER JOIN vehiculos v ON o.vehiculo_id = v.id
+        INNER JOIN tarifario t ON v.tarifario_id = t.id
+        WHERE o.id = @orden_id AND o.numero_orden = @codigo_verificacion;
+
+        -- Validación de existencia
+        IF @v_contrato_id IS NULL 
+            THROW 50001, 'El código de orden no coincide o la orden no existe.', 1;
+
+        -- 3. Validar que el peso real no exceda la capacidad del camión (Regla de Patio)
+        IF @peso_real > @v_capacidad_max 
+            THROW 50002, 'Capacidad excedida: El peso real supera el límite permitido para esta unidad.', 1;
+
+        -- 4. Recalcular costo basado en la tarifa pactada (costo / (distancia * peso_est))
+        -- Esto asegura que si lleva más peso, el costo suba proporcionalmente.
+        DECLARE @v_tarifa_por_ton_km DECIMAL(10,4) = @v_costo_anterior / NULLIF(@v_distancia * @v_peso_estimado, 0);
+        DECLARE @v_nuevo_costo DECIMAL(10,2) = @v_distancia * @v_tarifa_por_ton_km * @peso_real;
+        DECLARE @v_diferencia DECIMAL(10,2) = @v_nuevo_costo - @v_costo_anterior;
+
+        -- 5. Actualizar la Orden al estado solicitado
+        UPDATE ordenes 
+        SET peso_real = @peso_real,
+            costo = @v_nuevo_costo,
+            estado = 'LISTO_DESPACHO' -- Estado de salida de patio
+        WHERE id = @orden_id;
+
+        -- 6. Sincronizar el saldo del contrato con el nuevo costo real
+        UPDATE contratos 
+        SET saldo_usado = saldo_usado + @v_diferencia
+        WHERE id = @v_contrato_id;
+
+        -- 7. Mantener el vehículo como ASIGNADO (para evitar conflicto de CHECK constraint)
+        UPDATE vehiculos SET estado = 'ASIGNADO' WHERE id = @v_vehiculo_id;
+
+        COMMIT TRANSACTION;
+        
+        -- Retornar la orden actualizada
+        SELECT * FROM ordenes WHERE id = @orden_id;
+
+      END TRY
+      BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        THROW;
+      END CATCH
+    `);
+  return result.recordset[0];
+}
 
 module.exports = {
   insertarOrden,
@@ -218,4 +289,5 @@ module.exports = {
   obtenerContextoValidacion,
   getVehiculos,
   getPilotos,
+  formalizarSalidaPatio,
 };

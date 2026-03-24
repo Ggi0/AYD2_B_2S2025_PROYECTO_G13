@@ -6,6 +6,7 @@ const ordenController = require("../../controllers/orden/orden.controller");
 const {
   validarGenerarOrden,
   valAsignacionRecursos,
+  valSalidaPatio,
 } = require("../../middlewares/orden/orden.validation.middleware");
 
 const router = express.Router();
@@ -18,5 +19,12 @@ router.put("/:id", valAsignacionRecursos, ordenController.asignarRecursos);
 
 router.get("/vehiculos", ordenController.getVehiculos);
 router.get("/pilotos", ordenController.getPilotos);
+
+// Rutas destinadas a la logistica de la orden
+router.put(
+  "/logistica/:id",
+  valSalidaPatio,
+  ordenController.registrarSalidaPatio,
+);
 
 module.exports = router;

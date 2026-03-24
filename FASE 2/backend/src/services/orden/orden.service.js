@@ -88,10 +88,36 @@ async function getPilotos() {
   };
 }
 
+async function registrarSalidaPatio(ordenId, payload) {
+  // Validaciones de confirmación física
+  if (!payload.asegurada || !payload.estibada) {
+    throw crearError(
+      "La carga debe estar asegurada y estibada para autorizar la salida.",
+      403,
+    );
+  }
+
+  if (!payload.peso_real || payload.peso_real <= 0) {
+    throw crearError("Debe ingresar un peso real válido.", 400);
+  }
+
+  // Llamada al store que procesa todo en la BD
+  const ordenActualizada = await ordenStore.formalizarSalidaPatio(
+    ordenId,
+    payload,
+  );
+
+  return {
+    mensaje: "Salida de patio formalizada. Unidad en tránsito.",
+    data: ordenActualizada,
+  };
+}
+
 module.exports = {
   generarOrden,
   optenerOrden,
   asignarRecursos,
   getVehiculos,
   getPilotos,
+  registrarSalidaPatio,
 };

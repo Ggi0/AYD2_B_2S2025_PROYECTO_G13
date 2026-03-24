@@ -41,4 +41,26 @@ function valAsignacionRecursos(req, res, next) {
   next();
 }
 
-module.exports = { validarGenerarOrden, valAsignacionRecursos };
+function valSalidaPatio(req, res, next) {
+  const { id } = req.params;
+  const { codigo_orden, peso_real, asegurada, estibada } = req.body;
+
+  if (!id || isNaN(id)) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "ID de orden inválido." });
+  }
+
+  if (!codigo_orden || !peso_real || !asegurada || !estibada) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "Faltan campos obligatorios." });
+  }
+  next();
+}
+
+module.exports = {
+  validarGenerarOrden,
+  valAsignacionRecursos,
+  valSalidaPatio,
+};

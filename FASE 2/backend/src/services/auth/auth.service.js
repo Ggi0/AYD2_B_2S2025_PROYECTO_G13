@@ -28,6 +28,12 @@ function getDisplayName(user) {
   return user.email;
 }
 
+// Caso de uso: registro de usuario.
+// 1) Valida payload.
+// 2) Verifica duplicidad por email.
+// 3) Genera hash de contraseña.
+// 4) Persiste en SQL Server.
+// 5) Intenta enviar correo informativo (no bloqueante).
 async function register(payload) {
   const {
     nit,
@@ -115,6 +121,12 @@ async function register(payload) {
   };
 }
 
+// Caso de uso: login de usuario.
+// 1) Valida payload.
+// 2) Busca usuario en SQL Server.
+// 3) Verifica estado ACTIVO.
+// 4) Compara password con bcrypt.
+// 5) Emite JWT para sesión.
 async function login(payload) {
   const { email, password } = payload;
 

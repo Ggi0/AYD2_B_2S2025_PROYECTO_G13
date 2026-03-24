@@ -2,6 +2,7 @@
 
 const authService = require("../../services/auth/auth.service");
 
+// Handler de POST /api/auth/register
 async function register(req, res) {
   try {
     const result = await authService.register(req.body || {});
@@ -14,6 +15,7 @@ async function register(req, res) {
   }
 }
 
+// Handler de POST /api/auth/login
 async function login(req, res) {
   try {
     const result = await authService.login(req.body || {});
@@ -26,6 +28,7 @@ async function login(req, res) {
   }
 }
 
+// Handler de GET /api/auth/me
 function me(req, res) {
   return res.status(200).json({
     ok: true,

@@ -12,6 +12,7 @@ router.get('/', (req, res) => {
 // Importar rutas por módulo
 const facturacionRoutes = require('./facturacion/routes_factuacion');
 const authRoutes = require('./auth/auth.routes');
+const gerencialDashboardRoutes = require('./gerencial/dashboard.routes');
 
 // otras carpetas por ejemplo:
 // const contratosRoutes = require('./contratos/routes_contratos');
@@ -19,8 +20,12 @@ const authRoutes = require('./auth/auth.routes');
 
 // Convención general:
 // /api/funcion
+// ENDPOINT PREFIX: /api/facturacion/*
 router.use('/facturacion', facturacionRoutes);
+// ENDPOINT PREFIX: /api/auth/*
 router.use('/auth', authRoutes);
+// ENDPOINT PREFIX: /api/gerencial/*
+router.use('/gerencial', gerencialDashboardRoutes);
 //  /api/contratos
 //  router.use('/contratos', contratosRoutes);
 

@@ -70,6 +70,7 @@ function mapDbRowToUser(row) {
 }
 
 async function findByEmail(email) {
+  // Punto de lectura para login/registro: busca usuario por email único.
   const pool = await getConnection();
 
   const result = await pool
@@ -95,6 +96,7 @@ async function findByEmail(email) {
 }
 
 async function createUser(payload) {
+  // Punto de escritura para registro: inserta usuario y retorna fila creada.
   const fullName = `${payload.nombres || ""} ${payload.apellidos || ""}`.trim();
   const nombre = fullName || String(payload.nombres || "Usuario").trim();
   const dbRole = mapAppRoleToDb(payload.role);

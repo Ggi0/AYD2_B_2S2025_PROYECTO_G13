@@ -4,6 +4,7 @@ import {
   FaTruck, FaMapMarkerAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
 const Principal: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const Principal: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900">
+      <MenuPrincipal onLoginClick={handleLoginClick} onRegisterClick={handleRegisterClick} />
+      
       {/* Hero Section */}
       <div className="container mx-auto px-6 pt-32">
         <div className="text-center">

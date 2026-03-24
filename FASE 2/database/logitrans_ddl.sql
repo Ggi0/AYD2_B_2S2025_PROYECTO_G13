@@ -38,12 +38,12 @@ CREATE TABLE tarifario (
 
 CREATE TABLE vehiculos (
     id INT IDENTITY(1,1) PRIMARY KEY,
+    tarifario_id INT NOT NULL,
     placa NVARCHAR(20) NOT NULL UNIQUE,
-    tipo_unidad NVARCHAR(10) NOT NULL CHECK (tipo_unidad IN ('LIGERA','PESADA','CABEZAL')),
-    capacidad_ton DECIMAL(5,2) NOT NULL,
     estado NVARCHAR(15) NOT NULL DEFAULT 'DISPONIBLE' CHECK (estado IN ('DISPONIBLE','ASIGNADO','MANTENIMIENTO')),
     activo BIT NOT NULL DEFAULT 1,
     creado_por INT NOT NULL,
+    CONSTRAINT FK_tarifario_id FOREIGN KEY (tarifario_id) REFERENCES tarifario(id),
     CONSTRAINT FK_vehiculos_creado_por FOREIGN KEY (creado_por) REFERENCES usuarios(id)
 );
 

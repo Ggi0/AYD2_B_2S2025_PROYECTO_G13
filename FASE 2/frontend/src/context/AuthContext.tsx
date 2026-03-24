@@ -1,3 +1,4 @@
+// src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { meRequest, type AuthUser } from '../services/auth/authApi';
 
@@ -63,6 +64,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: Number(payload.sub) || undefined,
         email: payload.email || user?.email || '',
         role: payload.role || user?.role || 'cliente',
+        nombres: payload.nombres || user?.nombres,
+        apellidos: payload.apellidos || user?.apellidos,
       };
 
       setSession(storedToken, normalizedUser);

@@ -1,9 +1,10 @@
+// src/pages/Principal/Principal.tsx
 import React from 'react';
 import { 
   FaTruck, FaMapMarkerAlt
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '../../components/principal/MainLayout';
+import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
 const Principal: React.FC = () => {
   const navigate = useNavigate();
@@ -17,9 +18,11 @@ const Principal: React.FC = () => {
   };
 
   return (
-    <MainLayout>
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900">
+      <MenuPrincipal onLoginClick={handleLoginClick} onRegisterClick={handleRegisterClick} />
+      
       {/* Hero Section */}
-      <div className="container mx-auto px-6 pt-16">
+      <div className="container mx-auto px-6 pt-32">
         <div className="text-center">
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-6">
             Logística Inteligente
@@ -125,7 +128,7 @@ const Principal: React.FC = () => {
           </div>
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 

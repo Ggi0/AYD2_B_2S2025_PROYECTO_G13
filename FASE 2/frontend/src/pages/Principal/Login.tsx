@@ -1,10 +1,10 @@
-// src/pages/Principal/Login.tsx (actualizado con las rutas correctas)
+// src/pages/Principal/Login.tsx
 import React, { useState } from 'react';
 import { FaTruck, FaEye, FaEyeSlash, FaMapMarkerAlt, FaShieldAlt, FaClock } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '../../components/principal/MainLayout';
 import { loginRequest } from '../../services/auth/authApi';
 import { useAuth } from '../../context/AuthContext';
+import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -40,9 +40,20 @@ const Login: React.FC = () => {
         id: response.data.user.id,
         email: response.data.user.email,
         role: response.data.user.role,
+        nombres: response.data.user.nombres,
+        apellidos: response.data.user.apellidos,
       });
 
-      navigate('/panel');
+      const userRole = response.data.user.role;
+      if (userRole === 'client' || userRole === 'cliente') {
+        navigate('/client/dashboard');
+      } else if (userRole === 'piloto') {
+        navigate('/piloto/dashboard');
+      } else if (userRole === 'finanzas') {
+        navigate('/finanzas/dashboard');
+      } else {
+        navigate('/panel');
+      }
     } catch (error: unknown) {
       const message = error instanceof Error
         ? error.message
@@ -57,11 +68,21 @@ const Login: React.FC = () => {
     navigate('/registro/tipos');
   };
 
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
   return (
-    <MainLayout>
-      <div className="min-h-[calc(100vh-80px)] grid grid-cols-1 md:grid-cols-12 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
+      {/* MenuPrincipal at the top with dark blue background */}
+      <div className="bg-blue-900 shadow-lg">
+        <MenuPrincipal onLoginClick={handleLoginClick} onRegisterClick={handleRegisterClick} />
+      </div>
+      
+      {/* Main content - Login Form and Image */}
+      <div className="grid grid-cols-1 md:grid-cols-12 relative">
         {/* Columna izquierda - Formulario */}
-        <div className="col-span-1 md:col-span-5 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 text-white p-8 md:p-12 relative">
+        <div className="col-span-1 md:col-span-5 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 text-white p-8 md:p-12 relative min-h-[calc(100vh-72px)]">
           <div className="absolute top-0 right-0 bottom-0 w-32 md:w-48 bg-gradient-to-l from-blue-900 via-blue-900/80 to-transparent z-10"></div>
           <div className="absolute top-0 right-0 bottom-0 w-64 md:w-96 bg-gradient-to-l from-blue-900/60 via-blue-900/20 to-transparent z-5 blur-sm"></div>
 
@@ -179,7 +200,8 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-span-1 md:col-span-7 relative min-h-[400px] md:min-h-[calc(100vh-80px)]">
+        {/* Columna derecha - Imagen */}
+        <div className="col-span-1 md:col-span-7 relative min-h-[calc(100vh-72px)]">
           <div className="absolute top-0 left-0 bottom-0 w-32 md:w-48 bg-gradient-to-r from-blue-900/90 via-blue-900/70 to-transparent z-10"></div>
           <div className="absolute top-0 left-0 bottom-0 w-64 md:w-96 bg-gradient-to-r from-blue-900/60 via-blue-900/30 to-transparent z-5 blur-sm"></div>
 
@@ -255,10 +277,8 @@ const Login: React.FC = () => {
             </div>
           </div>
         </div>
-
-        <div className="absolute top-1/2 left-5/12 transform -translate-y-1/2 w-1 h-3/4 bg-gradient-to-b from-transparent via-blue-300/30 to-transparent z-30 hidden md:block"></div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 

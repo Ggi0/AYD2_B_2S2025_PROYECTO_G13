@@ -89,6 +89,11 @@ const crearContrato = async (datos, usuario_ejecutor, ip) => {
   return contrato;
 };
 
+const listarTodosContratos = async ({ limit, estado } = {}) => {
+  return await Contrato.listarTodos(limit, estado);
+};
+
+
 /**
  * @async
  * @function obtenerContrato
@@ -298,6 +303,7 @@ module.exports = {
   crearContrato,
   obtenerContrato,
   listarContratosPorCliente,
+  listarTodosContratos,  // NUEVO
   modificarContrato,
   validarCliente,
   agregarDescuento,

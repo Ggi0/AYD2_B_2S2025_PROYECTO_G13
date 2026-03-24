@@ -1,3 +1,4 @@
+// src/components/logistico/LogisticMenu.tsx
 import React, { useState } from 'react';
 import { 
   FaTachometerAlt,
@@ -5,13 +6,10 @@ import {
   FaClipboardList,
   FaMapMarkerAlt,
   FaUsers,
-  FaCalendarAlt,
-  FaChartBar,
   FaBars,
   FaTimes,
-  FaRoute,
-  FaBoxes,
-  FaFileAlt
+  FaFileContract,
+  FaChartLine
 } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -20,7 +18,6 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   path: string;
-  badge?: number;
 }
 
 const LogisticMenu: React.FC = () => {
@@ -36,60 +33,34 @@ const LogisticMenu: React.FC = () => {
       path: '/logistico/dashboard'
     },
     {
-      id: 'orders',
+      id: 'contratos',
+      label: 'Contratos',
+      icon: <FaFileContract className="h-5 w-5" />,
+      path: '/logistico/contratos'
+    },
+    {
+      id: 'ordenes',
       label: 'Órdenes de Servicio',
       icon: <FaClipboardList className="h-5 w-5" />,
-      path: '/logistico/orders',
-      badge: 8
+      path: '/logistico/ordenes'
     },
     {
-      id: 'assignments',
+      id: 'asignaciones',
       label: 'Asignaciones',
       icon: <FaTruck className="h-5 w-5" />,
-      path: '/logistico/assignments',
-      badge: 3
+      path: '/logistico/asignaciones'
     },
     {
-      id: 'tracking',
-      label: 'Seguimiento en Ruta',
-      icon: <FaMapMarkerAlt className="h-5 w-5" />,
-      path: '/logistico/tracking'
-    },
-    {
-      id: 'routes',
-      label: 'Gestión de Rutas',
-      icon: <FaRoute className="h-5 w-5" />,
-      path: '/logistico/routes'
-    },
-    {
-      id: 'vehicles',
-      label: 'Flota de Vehículos',
-      icon: <FaBoxes className="h-5 w-5" />,
-      path: '/logistico/vehicles'
-    },
-    {
-      id: 'clients',
+      id: 'clientes',
       label: 'Clientes',
       icon: <FaUsers className="h-5 w-5" />,
-      path: '/logistico/clients'
+      path: '/logistico/clientes'
     },
     {
-      id: 'schedule',
-      label: 'Programación',
-      icon: <FaCalendarAlt className="h-5 w-5" />,
-      path: '/logistico/schedule'
-    },
-    {
-      id: 'reports',
+      id: 'reportes',
       label: 'Reportes',
-      icon: <FaChartBar className="h-5 w-5" />,
-      path: '/logistico/reports'
-    },
-    {
-      id: 'documents',
-      label: 'Documentos',
-      icon: <FaFileAlt className="h-5 w-5" />,
-      path: '/logistico/documents'
+      icon: <FaChartLine className="h-5 w-5" />,
+      path: '/logistico/reportes'
     }
   ];
 
@@ -135,17 +106,6 @@ const LogisticMenu: React.FC = () => {
               >
                 {item.icon}
                 <span>{item.label}</span>
-                {item.badge && (
-                  <span className={`
-                    ml-1 px-2 py-0.5 text-xs rounded-full
-                    ${isActive(item.path)
-                      ? 'bg-orange-100 text-orange-600'
-                      : 'bg-gray-100 text-gray-600'
-                    }
-                  `}>
-                    {item.badge}
-                  </span>
-                )}
               </button>
             ))}
           </div>
@@ -161,35 +121,21 @@ const LogisticMenu: React.FC = () => {
                 key={item.id}
                 onClick={() => handleNavigation(item.path)}
                 className={`
-                  flex items-center justify-between w-full px-3 py-3 rounded-md text-base font-medium
+                  flex items-center w-full px-3 py-3 rounded-md text-base font-medium
                   ${isActive(item.path)
                     ? 'bg-orange-50 text-orange-600'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }
                 `}
               >
-                <div className="flex items-center space-x-3">
-                  {item.icon}
-                  <span>{item.label}</span>
-                </div>
-                {item.badge && (
-                  <span className={`
-                    px-2 py-0.5 text-xs rounded-full
-                    ${isActive(item.path)
-                      ? 'bg-orange-100 text-orange-600'
-                      : 'bg-gray-100 text-gray-600'
-                    }
-                  `}>
-                    {item.badge}
-                  </span>
-                )}
+                {item.icon}
+                <span className="ml-3">{item.label}</span>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {/* Estilos adicionales para scrollbar */}
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;

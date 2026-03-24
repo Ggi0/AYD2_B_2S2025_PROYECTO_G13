@@ -93,6 +93,53 @@ const buscarPorId = async (id) => {
   return result.recordset[0];
 };
 
+// FASE 2/backend/src/models/contratos/Contrato.js
+// Agregar esta función
+
+/**
+ * Lista todos los contratos del sistema con información de clientes
+ * @async
+ * @function listarTodos
+ * @param {number} limit - Límite de resultados (opcional)
+ * @param {string} estado - Filtrar por estado (opcional)
+ * @returns {Promise<Array>} Array de contratos
+ */
+const listarTodos = async (limit, estado) => {
+  const pool = await getConnection();
+  let query = `
+    SELECT c.id, c.numero_contrato, c.fecha_inicio, c.fecha_fin,
+           c.estado, c.limite_credito, c.saldo_usado,
+           c.plazo_pago, c.fecha_creacion,
+           u.nombre AS cliente_nombre, u.nit AS cliente_nit
+    FROM contratos c
+    LEFT JOIN usuarios u ON u.id = c.cliente_id
+  `;
+  
+  const params = [];
+  if (estado) {
+    query += ` WHERE c.estado = @estado`;
+    params.push({ name: 'estado', type: sql.NVarChar, value: estado });
+  }
+  
+  query += ` ORDER BY c.fecha_creacion DESC`;
+  
+  if (limit) {
+    query += ` OFFSET 0 ROWS FETCH NEXT @limit ROWS ONLY`;
+    params.push({ name: 'limit', type: sql.Int, value: parseInt(limit) });
+  }
+  
+  const request = pool.request();
+  params.forEach(param => {
+    request.input(param.name, param.type, param.value);
+  });
+  
+  const result = await request.query(query);
+  return result.recordset;
+};
+
+
+
+
 /**
  * Lista todos los contratos de un cliente específico ordenados por fecha de creación
  * @async
@@ -271,5 +318,6 @@ module.exports = {
   buscarVigentePorCliente,
   actualizarContrato,
   actualizarSaldo,
-  cambiarEstado
+  cambiarEstado,
+  listarTodos  // NUEVO
 };

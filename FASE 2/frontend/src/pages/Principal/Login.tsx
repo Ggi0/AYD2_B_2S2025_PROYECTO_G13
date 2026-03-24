@@ -48,7 +48,7 @@ const Login: React.FC = () => {
       // Redirigir según el rol del usuario
       if (userRole === 'client' || userRole === 'cliente') {
         navigate('/client/dashboard');
-      } else if (userRole === 'logistic' || userRole === 'logistico') {
+      } else if (['logistic', 'logistico', 'operativo'].includes(userRole)) {
         navigate('/logistico/dashboard');
       } else if (userRole === 'piloto') {
         navigate('/piloto/dashboard');

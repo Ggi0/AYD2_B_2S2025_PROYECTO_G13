@@ -17,7 +17,8 @@ const { signJwt } = require("../../utils/jwt");
 const userStore = require("../../models/auth/user.store");
 const { notificarInformativo } = require("../../utils/mailer");
 
-const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo"];
+// Roles permitidos actualizados para incluir agente_logistico
+const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo", "agente_logistico"];
 
 function createHttpError(message, statusCode) {
   const error = new Error(message);
@@ -50,7 +51,7 @@ function getDisplayName(user) {
  * @param {string} payload.email - Email único del usuario (debe ser válido)
  * @param {string} payload.password - Contraseña (mínimo 8 caracteres)
  * @param {string} payload.confirmPassword - Confirmación de contraseña (debe coincidir con password)
- * @param {string} [payload.role="cliente"] - Rol del usuario (cliente, piloto, finanzas, gerencia, operativo)
+ * @param {string} [payload.role="cliente"] - Rol del usuario (cliente, piloto, finanzas, gerencia, operativo, agente_logistico)
  * @param {string} [payload.nombres=""] - Nombres del usuario
  * @param {string} [payload.apellidos=""] - Apellidos del usuario
  * @param {string} [payload.telefono=""] - Número de contacto del usuario
@@ -174,33 +175,71 @@ async function register(payload) {
 async function login(payload) {
   const { email, password } = payload;
 
+  console.log('[LOGIN] === INICIO DE PROCESO DE LOGIN ===');
+  console.log('[LOGIN] Email recibido:', email);
+  console.log('[LOGIN] Password recibida:', password ? '***' : 'No recibida');
+
   if (!email || !password) {
+    console.log('[LOGIN] Error: Email o password faltante');
     throw createHttpError("Email y password son obligatorios", 400);
   }
 
   if (!validateEmail(email)) {
+    console.log('[LOGIN] Error: Formato de email inválido:', email);
     throw createHttpError("Formato de email invalido", 400);
   }
 
+  console.log('[LOGIN] Buscando usuario en base de datos con email:', email.toLowerCase());
   const user = await userStore.findByEmail(email.toLowerCase());
+  
   if (!user) {
+    console.log('[LOGIN] Error: Usuario no encontrado con email:', email.toLowerCase());
     throw createHttpError("Credenciales invalidas", 401);
   }
 
-  if (String(user.estado || "").toUpperCase() !== "ACTIVO") {
+  console.log('[LOGIN] Usuario encontrado en BD:');
+  console.log('[LOGIN] - ID:', user.id);
+  console.log('[LOGIN] - Email:', user.email);
+  console.log('[LOGIN] - Rol (original):', user.role);
+  console.log('[LOGIN] - Estado:', user.estado);
+  console.log('[LOGIN] - Nombres:', user.nombres);
+  console.log('[LOGIN] - Apellidos:', user.apellidos);
+  console.log('[LOGIN] - Password Hash (primeros 20 chars):', user.passwordHash ? user.passwordHash.substring(0, 20) + '...' : 'No hay hash');
+
+  // Verificar estado del usuario
+  const userEstado = String(user.estado || "").toUpperCase();
+  console.log('[LOGIN] Estado del usuario normalizado:', userEstado);
+  
+  if (userEstado !== "ACTIVO") {
+    console.log('[LOGIN] Error: Usuario no está activo. Estado actual:', user.estado);
     throw createHttpError("El usuario no está activo", 403);
   }
 
+  console.log('[LOGIN] Verificando contraseña con bcrypt.compare()...');
   const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+  
+  console.log('[LOGIN] Resultado de verificación de contraseña:', isValidPassword);
+  
   if (!isValidPassword) {
+    console.log('[LOGIN] Error: Contraseña incorrecta para el usuario:', email);
     throw createHttpError("Credenciales invalidas", 401);
   }
 
+  // Normalizar el rol a minúsculas para consistencia en el frontend
+  const normalizedRole = user.role.toLowerCase();
+  console.log('[LOGIN] Rol normalizado (para JWT):', normalizedRole);
+
+  console.log('[LOGIN] Generando token JWT...');
   const token = signJwt({
     sub: String(user.id),
     email: user.email,
-    role: user.role,
+    role: normalizedRole,
+    nombres: user.nombres,
+    apellidos: user.apellidos,
   });
+
+  console.log('[LOGIN] Token JWT generado correctamente');
+  console.log('[LOGIN] === LOGIN EXITOSO para usuario:', email, 'con rol:', normalizedRole, '===');
 
   return {
     mensaje: "Login exitoso",
@@ -209,7 +248,7 @@ async function login(payload) {
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: normalizedRole,
         nombres: user.nombres,
         apellidos: user.apellidos,
       },

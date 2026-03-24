@@ -1,6 +1,7 @@
+// backend/src/middlewares/auth/auth.validation.middleware.js
 "use strict";
 
-const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo"];
+const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo", "agente_logistico"];
 
 function isValidEmail(email) {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

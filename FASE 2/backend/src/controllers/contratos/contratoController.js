@@ -1,4 +1,4 @@
-// controllers/contratos/contratoController.js
+// FASE 2/backend/src/controllers/contratos/contratoController.js
 const contratoService = require('../../services/contratos/contratoService');
 
 const crearContrato = async (req, res) => {
@@ -33,6 +33,17 @@ const listarContratosPorCliente = async (req, res) => {
   try {
     const { cliente_id } = req.params;
     const contratos = await contratoService.listarContratosPorCliente(Number(cliente_id));
+    res.status(200).json({ ok: true, data: contratos });
+  } catch (error) {
+    res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al listar contratos' });
+  }
+};
+
+// NUEVA FUNCIÓN
+const listarTodosContratos = async (req, res) => {
+  try {
+    const { limit, estado } = req.query;
+    const contratos = await contratoService.listarTodosContratos({ limit, estado });
     res.status(200).json({ ok: true, data: contratos });
   } catch (error) {
     res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al listar contratos' });
@@ -105,6 +116,7 @@ module.exports = {
   crearContrato,
   obtenerContrato,
   listarContratosPorCliente,
+  listarTodosContratos,  // NUEVO - Exportar la función
   modificarContrato,
   validarCliente,
   agregarDescuento,

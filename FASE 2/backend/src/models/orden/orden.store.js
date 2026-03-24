@@ -1,68 +1,61 @@
 "use strict";
 const { sql, getConnection } = require("../../config/db");
 
-async function obtenerContratoValido(cliente_id) {
+async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
   const pool = await getConnection();
-  // CDU 002.7: Validar contrato vigente y saldo
-  const result = await pool.request().input("cliente_id", sql.Int, cliente_id)
-    .query(`
-            SELECT TOP 1 id, limite_credito, saldo_usado
-            FROM contratos 
-            WHERE cliente_id = @cliente_id 
+  const result = await pool
+    .request()
+    .input("cliente_id", sql.Int, cliente_id)
+    .input("origen", sql.NVarChar, `%${origen}%`)
+    .input("destino", sql.NVarChar, `%${destino}%`)
+    .input("peso", sql.Decimal(10, 2), peso).query(`
+      -- 1. Declarar y asignar la variable de forma aislada
+      DECLARE @v_contrato_id INT;
+      
+      SET @v_contrato_id = (
+          SELECT TOP 1 id 
+          FROM contratos 
+          WHERE cliente_id = @cliente_id 
             AND estado = 'VIGENTE' 
             AND fecha_fin >= GETDATE()
-        `);
-  return result.recordset[0];
-}
+          ORDER BY fecha_inicio DESC
+      );
 
-async function facturasVencidas(cliente_id) {
-  const pool = await getConnection();
-  const result = await pool.request().input("cliente_id", sql.Int, cliente_id)
-    .query(`
-            select 1
-            from cuentas_por_cobrar
-            where cliente_id = @cliente_id 
-            AND estado_cobro = 'VENCIDA';
-        `);
-  return result.recordset[0];
-}
+      -- 2. Devolver los datos del contrato (Recordset 0)
+      SELECT id, limite_credito, saldo_usado 
+      FROM contratos 
+      WHERE id = @v_contrato_id;
 
-async function tarifaCamion(contrato_id, peso_estimado) {
-  const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("contrato_id", sql.Int, contrato_id)
-    .input("peso_estimado", sql.Decimal(5, 2), peso_estimado).query(`
-        SELECT
-            Top 1
-            ISNULL(
-                ct.costo_km_negociado,
-                t.costo_base_km
-            ) AS costo_km,
-            t.tipo_unidad,
-            t.limite_peso_ton
-        FROM tarifario t
-        LEFT JOIN contrato_tarifas ct ON ct.tarifario_id = t.id AND ct.contrato_id = @contrato_id
-        WHERE @peso_estimado <= t.limite_peso_ton
-        ORDER BY t.limite_peso_ton ASC;`);
-  return result.recordset[0];
-}
+      -- 3. Facturas Vencidas (Recordset 1)
+      SELECT COUNT(*) as vencidas 
+      FROM cuentas_por_cobrar 
+      WHERE cliente_id = @cliente_id AND estado_cobro = 'VENCIDA';
 
-async function desplazaminetoAutorizado(contrato_id, origen, destino) {
-  const pool = await getConnection();
-  const result = await pool
-    .request()
-    .input("contrato_id", sql.Int, contrato_id)
-    .input("origen", sql.NVarChar(100), origen)
-    .input("destino", sql.NVarChar(100), destino)
-    .query(
-      `select distancia_km
-        from rutas_autorizadas
-        where contrato_id = @contrato_id
-        and origen like @origen
-        and destino like @destino;`,
-    );
-  return result.recordset[0];
+      -- 4. Ruta Autorizada (Recordset 2)
+      SELECT TOP 1 distancia_km 
+      FROM rutas_autorizadas 
+      WHERE contrato_id = @v_contrato_id
+        AND origen LIKE @origen 
+        AND destino LIKE @destino;
+
+      -- 5. Tarifa (Recordset 3)
+      SELECT TOP 1 
+          ISNULL(ct.costo_km_negociado, t.costo_base_km) AS costo_km
+      FROM tarifario t
+      LEFT JOIN contrato_tarifas ct ON ct.tarifario_id = t.id 
+                                   AND ct.contrato_id = @v_contrato_id
+      WHERE @peso <= t.limite_peso_ton
+      ORDER BY t.limite_peso_ton ASC;
+    `);
+
+  return {
+    contrato: result.recordsets[0][0] || null,
+    facturasVencidas: result.recordsets[1][0]
+      ? result.recordsets[1][0].vencidas
+      : 0,
+    ruta: result.recordsets[2][0] || null,
+    tarifa: result.recordsets[3][0] || null,
+  };
 }
 
 async function insertarOrden(datos) {
@@ -194,14 +187,35 @@ async function actualizarAsignacion(ordenId, datos) {
   return result.recordset[0];
 }
 
+async function getVehiculos() {
+  const pool = await getConnection();
+  const result = await pool.request().query(`
+    select id, placa, estado, tarifario_id
+    from vehiculos
+    where activo = 1
+    and estado like 'DISPONIBLE';
+    `);
+  return result.recordset;
+}
+
+async function getPilotos() {
+  const pool = await getConnection();
+  const result = await pool.request().query(`
+    select id, nombre, nit, email, telefono
+    from usuarios
+    where tipo_usuario like 'PILOTO'
+    AND estado like 'ACTIVO';
+    `);
+  return result.recordset;
+}
+
 module.exports = {
-  obtenerContratoValido,
-  facturasVencidas,
-  desplazaminetoAutorizado,
-  tarifaCamion,
   insertarOrden,
   obtenerOrdenes,
   vehiculoApto,
   conductorApto,
   actualizarAsignacion,
+  obtenerContextoValidacion,
+  getVehiculos,
+  getPilotos,
 };

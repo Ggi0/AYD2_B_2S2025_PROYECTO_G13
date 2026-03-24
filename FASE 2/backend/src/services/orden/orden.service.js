@@ -2,79 +2,38 @@
 const ordenStore = require("../../models/orden/orden.store");
 
 async function generarOrden(payload) {
-  // Verificar si existe contrato vigente
-  const contrato = await ordenStore.obtenerContratoValido(payload.cliente_id);
-  if (!contrato) {
-    const error = new Error(
-      "El cliente no posee un contrato vigente o está bloqueado.",
-    );
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // Validar si el contrato no tiene facturas vencidas
-  const cuentas_por_cobrar = await ordenStore.facturasVencidas(
+  const ctx = await ordenStore.obtenerContextoValidacion(
     payload.cliente_id,
-  );
-  if (cuentas_por_cobrar) {
-    const error = new Error(
-      "Tiene facturas venciada no puede realizar mas Ordenes.",
-    );
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // Validar Por contrato el destino y origen
-  const desplazamiento = await ordenStore.desplazaminetoAutorizado(
-    contrato.id,
     payload.origen,
     payload.destino,
-  );
-  if (!desplazamiento) {
-    const error = new Error("Desplazamiento No autorizado");
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // Obtener el costo del trasporte dependiendo de su tarifa por contrato
-  const costoPorPeso = await ordenStore.tarifaCamion(
-    contrato.id,
     payload.peso_estimado,
   );
 
-  if (!costoPorPeso) {
-    const error = new Error(
-      "El peso solicitado sobrepasa a el de nuestras unidades",
-    );
-    error.statusCode = 403;
-    throw error;
+  if (!ctx.contrato) throw crearError("Contrato no vigente o bloqueado", 403);
+  if (ctx.facturasVencidas > 0)
+    throw crearError("Tiene facturas vencidas", 403);
+  if (!ctx.ruta) throw crearError("Ruta no autorizada por contrato", 403);
+  if (!ctx.tarifa) throw crearError("Peso excede capacidad de unidades", 403);
+
+  const costoTotal = ctx.ruta.distancia_km * ctx.tarifa.costo_km;
+
+  if (ctx.contrato.saldo_usado + costoTotal > ctx.contrato.limite_credito) {
+    throw crearError("Crédito insuficiente", 403);
   }
 
-  const costoTotalDesplazamiento =
-    desplazamiento.distancia_km * costoPorPeso.costo_km;
-
-  if (
-    contrato.saldo_usado + costoTotalDesplazamiento >=
-    contrato.limite_credito
-  ) {
-    const error = new Error(
-      "No cuenta con credito suficiente para la generar la Orden",
-    );
-    error.statusCode = 403;
-    throw error;
-  }
-
-  // 3. Insertar en BD
   const nuevaOrden = await ordenStore.insertarOrden({
     ...payload,
-    contrato_id: contrato.id,
-    costo: costoTotalDesplazamiento,
+    contrato_id: ctx.contrato.id,
+    costo: costoTotal,
   });
 
-  return {
-    mensaje: "Orden de servicio registrada exitosamente",
-    data: nuevaOrden,
-  };
+  return { mensaje: "Orden registrada exitosamente", data: nuevaOrden };
+}
+
+function crearError(msg, code) {
+  const e = new Error(msg);
+  e.statusCode = code;
+  return e;
 }
 
 async function optenerOrden() {
@@ -113,4 +72,26 @@ async function asignarRecursos(ordenId, payload) {
   };
 }
 
-module.exports = { generarOrden, optenerOrden, asignarRecursos };
+async function getVehiculos() {
+  const vehiculos = await ordenStore.getVehiculos();
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: vehiculos,
+  };
+}
+
+async function getPilotos() {
+  const pilotos = await ordenStore.getPilotos();
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: pilotos,
+  };
+}
+
+module.exports = {
+  generarOrden,
+  optenerOrden,
+  asignarRecursos,
+  getVehiculos,
+  getPilotos,
+};

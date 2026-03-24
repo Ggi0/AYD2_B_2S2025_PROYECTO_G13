@@ -1,4 +1,3 @@
-// src/pages/Principal/Login.tsx
 import React, { useState } from 'react';
 import { FaTruck, FaEye, FaEyeSlash, FaMapMarkerAlt, FaShieldAlt, FaClock } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -44,13 +43,19 @@ const Login: React.FC = () => {
         apellidos: response.data.user.apellidos,
       });
 
-      const userRole = response.data.user.role;
+      const userRole = response.data.user.role?.toLowerCase();
+      
+      // Redirigir según el rol del usuario
       if (userRole === 'client' || userRole === 'cliente') {
         navigate('/client/dashboard');
+      } else if (userRole === 'logistic' || userRole === 'logistico') {
+        navigate('/logistico/dashboard');
       } else if (userRole === 'piloto') {
         navigate('/piloto/dashboard');
       } else if (userRole === 'finanzas') {
         navigate('/finanzas/dashboard');
+      } else if (userRole === 'admin') {
+        navigate('/admin/dashboard');
       } else {
         navigate('/panel');
       }

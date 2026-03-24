@@ -1,4 +1,3 @@
-// src/App.tsx
 import { type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Principal from './pages/Principal/Principal';
@@ -6,6 +5,7 @@ import TiposRegistro from './pages/Registro/TiposRegistro';
 import Login from './pages/Principal/Login';
 import PrincipalClient from './pages/client/PrincipalClient';
 import ClientContracts from './pages/client/ClientContracts';
+import PrincipalLogistico from './pages/logistico/PrincipalLogistico'; // Importar la nueva vista
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -60,7 +60,15 @@ function App() {
             }
           />
           
-        
+          {/* Rutas protegidas para logística */}
+          <Route
+            path="/logistico/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['logistic', 'logistico', 'admin']}>
+                <PrincipalLogistico />
+              </ProtectedRoute>
+            }
+          />
           
         </Routes>
       </Router>

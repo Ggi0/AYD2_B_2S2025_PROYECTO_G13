@@ -1,4 +1,3 @@
-// src/components/auth/ProtectedRoute.tsx
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -23,8 +22,27 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" replace />;
+  if (allowedRoles && allowedRoles.length > 0 && user) {
+    const userRole = user.role?.toLowerCase();
+    const hasAllowedRole = allowedRoles.some(
+      role => role.toLowerCase() === userRole
+    );
+
+    if (!hasAllowedRole) {
+      // Redirigir según el rol del usuario
+      if (userRole === 'client' || userRole === 'cliente') {
+        return <Navigate to="/client/dashboard" replace />;
+      } else if (userRole === 'logistic' || userRole === 'logistico') {
+        return <Navigate to="/logistico/dashboard" replace />;
+      } else if (userRole === 'piloto') {
+        return <Navigate to="/piloto/dashboard" replace />;
+      } else if (userRole === 'finanzas') {
+        return <Navigate to="/finanzas/dashboard" replace />;
+      } else if (userRole === 'admin') {
+        return <Navigate to="/admin/dashboard" replace />;
+      }
+      return <Navigate to="/login" replace />;
+    }
   }
 
   return <>{children}</>;

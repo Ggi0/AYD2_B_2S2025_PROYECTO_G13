@@ -238,20 +238,22 @@ async getMe(token: string): Promise<ApiResponse<MeResponse>> {
   /**
    * Validar si un cliente puede realizar una ruta
    */
-  async validarCliente(
-    clienteId: number,
-    params: { origen: string; destino: string; tipo_unidad: string }
-  ): Promise<ApiResponse<ValidacionCliente>> {
-    const queryParams = new URLSearchParams({
-      origen: params.origen,
-      destino: params.destino,
-      tipo_unidad: params.tipo_unidad,
-    }).toString();
-    
-    return this.request<ValidacionCliente>(`/contratos/validar/${clienteId}?${queryParams}`, {
-      method: "GET",
-    });
-  }
+  // src/services/api.ts - Ya tienes este método, verifica que esté correcto
+
+async validarCliente(
+  clienteId: number,
+  params: { origen: string; destino: string; tipo_unidad: string }
+): Promise<ApiResponse<ValidacionCliente>> {
+  const queryParams = new URLSearchParams({
+    origen: params.origen,
+    destino: params.destino,
+    tipo_unidad: params.tipo_unidad,
+  }).toString();
+  
+  return this.request<ValidacionCliente>(`/contratos/validar/${clienteId}?${queryParams}`, {
+    method: "GET",
+  });
+}
 
   /**
    * Agregar descuento a un contrato
@@ -300,6 +302,7 @@ async listarTodosContratos(params?: { limit?: number; estado?: string }): Promis
     method: "GET",
   });
 }
+
 
 
 

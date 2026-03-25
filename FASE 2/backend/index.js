@@ -7,7 +7,7 @@ const cors = require('cors');
 require("dotenv").config();
 
 const app = express();
-const PORT = 3000;
+const PORT = 3001;
 
 // Importar rutas principales
 const indexRoutes = require('./src/routes/index_routes');

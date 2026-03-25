@@ -28,7 +28,7 @@ const LogisticMenu: React.FC = () => {
   const menuItems: MenuItem[] = [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: 'Inicio',
       icon: <FaTachometerAlt className="h-5 w-5" />,
       path: '/logistico/dashboard'
     },

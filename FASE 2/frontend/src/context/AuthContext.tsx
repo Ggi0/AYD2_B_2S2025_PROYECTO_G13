@@ -20,11 +20,15 @@ function getStoredToken(): string | null {
 
 function getStoredUser(): AuthUser | null {
   const rawUser = localStorage.getItem('authUser');
+  console.log('[Auth] getStoredUser - raw:', rawUser);
   if (!rawUser) return null;
 
   try {
-    return JSON.parse(rawUser) as AuthUser;
+    const parsed = JSON.parse(rawUser) as AuthUser;
+    console.log('[Auth] getStoredUser - parsed:', parsed);
+    return parsed;
   } catch {
+    console.error('[Auth] Error parsing stored user');
     return null;
   }
 }
@@ -34,7 +38,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<AuthUser | null>(getStoredUser());
   const [isBootstrapping, setIsBootstrapping] = useState(true);
 
+  console.log('[Auth] Provider init - token:', !!token, 'user:', user);
+
   const logout = () => {
+    console.log('[Auth] Logout called');
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUser');
     setToken(null);
@@ -42,42 +49,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const setSession = (nextToken: string, nextUser: AuthUser) => {
+    console.log('[Auth] setSession called');
+    console.log('[Auth] - nextToken:', nextToken.substring(0, 30) + '...');
+    console.log('[Auth] - nextUser:', nextUser);
+    console.log('[Auth] - nextUser.id:', nextUser.id);
+    console.log('[Auth] - nextUser.role:', nextUser.role);
+    
     localStorage.setItem('authToken', nextToken);
     localStorage.setItem('authUser', JSON.stringify(nextUser));
     setToken(nextToken);
     setUser(nextUser);
   };
 
-  const refreshSession = async () => {
-    const storedToken = getStoredToken();
+  // src/context/AuthContext.tsx - Modificar refreshSession
 
-    if (!storedToken) {
-      logout();
-      return;
-    }
+const refreshSession = async () => {
+  const storedToken = getStoredToken();
+  console.log('[Auth] refreshSession - storedToken exists:', !!storedToken);
+  if (storedToken) {
+    console.log('[Auth] refreshSession - token preview:', storedToken.substring(0, 30) + '...');
+  }
 
-    try {
-      const response = await meRequest(storedToken);
-      const payload = response.data;
+  if (!storedToken) {
+    console.log('[Auth] No token found, logging out');
+    logout();
+    return;
+  }
 
-      const normalizedUser: AuthUser = {
-        id: Number(payload.sub) || undefined,
-        email: payload.email || user?.email || '',
-        role: payload.role || user?.role || 'cliente',
-        nombres: payload.nombres || user?.nombres,
-        apellidos: payload.apellidos || user?.apellidos,
-      };
+  try {
+    console.log('[Auth] Calling meRequest...');
+    const response = await meRequest(storedToken);
+    const payload = response.data;
+    console.log('[Auth] meRequest payload:', payload);
+    console.log('[Auth] payload.sub:', payload.sub);
+    console.log('[Auth] typeof payload.sub:', typeof payload.sub);
 
-      setSession(storedToken, normalizedUser);
-    } catch {
-      logout();
-    }
-  };
+    const normalizedUser: AuthUser = {
+      id: payload.sub ? Number(payload.sub) : undefined,
+      email: payload.email || user?.email || '',
+      role: payload.role || user?.role || 'cliente',
+      nombres: payload.nombres || user?.nombres,
+      apellidos: payload.apellidos || user?.apellidos,
+    };
+    
+    console.log('[Auth] Normalized user:', normalizedUser);
+    console.log('[Auth] User ID (final):', normalizedUser.id);
+
+    setSession(storedToken, normalizedUser);
+  } catch (error) {
+    console.error('[Auth] refreshSession error:', error);
+    logout();
+  }
+};
 
   useEffect(() => {
     (async () => {
+      console.log('[Auth] Bootstrapping...');
       await refreshSession();
       setIsBootstrapping(false);
+      console.log('[Auth] Bootstrapping complete - user:', user);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

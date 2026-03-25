@@ -122,10 +122,12 @@ const obtenerContrato = async (id) => {
  * @returns {Promise<Array>} Lista de contratos del cliente
  * @throws {Error} Si cliente no existe (404)
  */
-const listarContratosPorCliente = async (cliente_id) => {
-  const cliente = await Usuario.buscarPorId(cliente_id);
-  if (!cliente) throw { status: 404, mensaje: 'Cliente no encontrado' };
-  return await Contrato.listarPorCliente(cliente_id);
+// backend/src/services/contratos/contratoService.js
+const listarContratosPorCliente = async (clienteId) => {
+  console.log('[contratoService] listarContratosPorCliente - clienteId:', clienteId);
+  const result = await Contrato.listarPorCliente(clienteId);
+  console.log('[contratoService] Resultado:', result);
+  return result;
 };
 
 /**

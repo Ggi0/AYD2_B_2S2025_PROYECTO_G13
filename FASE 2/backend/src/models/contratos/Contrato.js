@@ -158,7 +158,11 @@ const listarTodos = async (limit, estado) => {
  * @example
  * const contratos = await listarPorCliente(5);
  */
+// backend/src/models/contratos/Contrato.js
 const listarPorCliente = async (cliente_id) => {
+  console.log('[Contrato.model] listarPorCliente - cliente_id:', cliente_id);
+  console.log('[Contrato.model] cliente_id type:', typeof cliente_id);
+  
   const pool = await getConnection();
   const result = await pool.request()
     .input('cliente_id', sql.Int, cliente_id)
@@ -170,6 +174,10 @@ const listarPorCliente = async (cliente_id) => {
       WHERE c.cliente_id = @cliente_id
       ORDER BY c.fecha_creacion DESC
     `);
+  
+  console.log('[Contrato.model] Query result recordset:', result.recordset);
+  console.log('[Contrato.model] Number of records:', result.recordset.length);
+  
   return result.recordset;
 };
 

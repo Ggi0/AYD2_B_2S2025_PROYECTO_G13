@@ -22,22 +22,44 @@ const crearContrato = async (req, res) => {
 const obtenerContrato = async (req, res) => {
   try {
     const { id } = req.params;
+    const usuario = req.user;
+    
     const contrato = await contratoService.obtenerContrato(Number(id));
+    
+    // Si es cliente, solo puede ver sus propios contratos
+    // Pero en lugar de error, simplemente retornar null (no mostrar mensaje)
+    if (usuario.role === 'cliente' && contrato.cliente_id !== usuario.id) {
+      return res.status(404).json({ 
+        ok: false, 
+        mensaje: 'Contrato no encontrado' 
+      });
+    }
+    
     res.status(200).json({ ok: true, data: contrato });
   } catch (error) {
     res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al obtener contrato' });
   }
 };
 
+// backend/src/controllers/contratos/contratoController.js
 const listarContratosPorCliente = async (req, res) => {
   try {
     const { cliente_id } = req.params;
+    console.log('[contratoController] listarContratosPorCliente - cliente_id:', cliente_id);
+    console.log('[contratoController] listarContratosPorCliente - tipo:', typeof cliente_id);
+    
     const contratos = await contratoService.listarContratosPorCliente(Number(cliente_id));
+    
+    console.log('[contratoController] Contratos encontrados:', contratos);
+    console.log('[contratoController] Cantidad de contratos:', contratos.length);
+    
     res.status(200).json({ ok: true, data: contratos });
   } catch (error) {
+    console.error('[contratoController] Error en listarContratosPorCliente:', error);
     res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al listar contratos' });
   }
 };
+
 
 // NUEVA FUNCIÓN
 const listarTodosContratos = async (req, res) => {
@@ -112,11 +134,13 @@ const agregarRuta = async (req, res) => {
   }
 };
 
+
+
 module.exports = {
   crearContrato,
   obtenerContrato,
   listarContratosPorCliente,
-  listarTodosContratos,  // NUEVO - Exportar la función
+  listarTodosContratos,  
   modificarContrato,
   validarCliente,
   agregarDescuento,

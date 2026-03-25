@@ -178,14 +178,22 @@ class ApiService {
     });
   }
 
-  async getMe(token: string): Promise<ApiResponse<MeResponse>> {
-    return this.request<MeResponse>("/auth/me", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-  }
+  // src/services/api.ts - En la clase ApiService, modificar getMe
+
+// src/services/api.ts - Modificar getMe
+
+async getMe(token: string): Promise<ApiResponse<MeResponse>> {
+  console.log('[apiService] getMe called with token:', token?.substring(0, 30) + '...');
+  const response = await this.request<MeResponse>("/auth/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  console.log('[apiService] getMe response:', response);
+  console.log('[apiService] getMe response.data.sub:', response.data?.sub);
+  return response;
+}
 
   // ============ MÉTODOS DE CONTRATOS ============
   
@@ -292,6 +300,8 @@ async listarTodosContratos(params?: { limit?: number; estado?: string }): Promis
     method: "GET",
   });
 }
+
+
 
   /**
    * Agregar ruta autorizada a un contrato

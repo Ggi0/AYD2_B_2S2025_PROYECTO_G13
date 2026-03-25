@@ -11,11 +11,13 @@ import {
   FaChartLine,
   FaSync,
   FaEye,
-  FaSearch
+  FaSearch,
+  FaCalculator
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import LogisticHeader from '../../components/logistico/LogisticHeader';
 import LogisticMenu from '../../components/logistico/LogisticMenu';
+import ValidacionClienteModal from '../../components/logistico/ValidacionClienteModal';
 import { useAuth } from '../../context/AuthContext';
 import { useContratos } from '../../services/Logistico/hooks/useContratos';
 import { formatMoney, formatDate, getContratoEstadoInfo } from '../../services/Logistico/Logistico';
@@ -37,6 +39,7 @@ const PrincipalLogistico: React.FC = () => {
   const { todosContratos, listarTodosContratos, loading, error, limpiarError } = useContratos();
   const [searchTerm, setSearchTerm] = useState('');
   const [estadoFiltro, setEstadoFiltro] = useState<string>('todos');
+  const [showValidacionModal, setShowValidacionModal] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalContratos: 0,
     contratosVigentes: 0,
@@ -248,7 +251,7 @@ const PrincipalLogistico: React.FC = () => {
             </div>
 
             {/* Acciones rápidas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <button 
                 onClick={() => navigate('/logistico/contratos/nuevo')}
                 className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-sm p-6 hover:shadow-md transition-all text-left group"
@@ -277,6 +280,22 @@ const PrincipalLogistico: React.FC = () => {
                     <h3 className="font-semibold text-white">Todos los Contratos</h3>
                     <p className="text-sm text-green-100">Ver listado completo</p>
                     <p className="text-xs text-green-200 mt-1">{stats.totalContratos} contratos</p>
+                  </div>
+                </div>
+              </button>
+              
+              <button 
+                onClick={() => setShowValidacionModal(true)}
+                className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-xl shadow-sm p-6 hover:shadow-md transition-all text-left group"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <FaCalculator className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white">Validar Cliente</h3>
+                    <p className="text-sm text-teal-100">Verificar autorización de servicio</p>
+                    <p className="text-xs text-teal-200 mt-1">Rutas, tarifas y descuentos</p>
                   </div>
                 </div>
               </button>
@@ -501,6 +520,12 @@ const PrincipalLogistico: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Modal de validación de cliente */}
+      <ValidacionClienteModal 
+        isOpen={showValidacionModal}
+        onClose={() => setShowValidacionModal(false)}
+      />
     </div>
   );
 };

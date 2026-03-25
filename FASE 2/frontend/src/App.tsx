@@ -6,11 +6,16 @@ import Login from './pages/Principal/Login';
 import PrincipalClient from './pages/client/PrincipalClient';
 import ClientContracts from './pages/client/ClientContracts';
 import ClientContractDetail from './pages/client/ClientContractDetail';
+import ClienteFacturasPage from './pages/client/ClienteFacturasPage';
+import ClientePagosPage from './pages/client/ClientePagosPage';
 import PrincipalLogistico from './pages/logistico/PrincipalLogistico';
 import ContratosList from './pages/logistico/ContratosList';
 import ContratoForm from './pages/logistico/ContratoForm';
 import ContratoDetail from './pages/logistico/ContratoDetail';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import FacturacionPage from './pages/finanzas/FacturacionPage';
+import PagosPage from './pages/finanzas/PagosPage';
+import DashboardGerencial from './pages/finanzas/DashboardGerencial';
 import { AuthProvider } from './context/AuthContext';
 
 function App() {
@@ -21,7 +26,8 @@ function App() {
           <Route path="/" element={<Principal />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registro/tipos" element={<TiposRegistro />} />
-          
+
+          {/* ── Cliente ── */}
           <Route
             path="/client/dashboard"
             element={
@@ -63,12 +69,7 @@ function App() {
             path="/client/invoices"
             element={
               <ProtectedRoute allowedRoles={['client', 'cliente']}>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-xl font-semibold text-gray-700">Mis Facturas</h2>
-                    <p className="text-gray-500 mt-2">Próximamente disponible</p>
-                  </div>
-                </div>
+                <ClienteFacturasPage />
               </ProtectedRoute>
             }
           />
@@ -76,16 +77,12 @@ function App() {
             path="/client/payments"
             element={
               <ProtectedRoute allowedRoles={['client', 'cliente']}>
-                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h2 className="text-xl font-semibold text-gray-700">Mis Pagos</h2>
-                    <p className="text-gray-500 mt-2">Próximamente disponible</p>
-                  </div>
-                </div>
+                <ClientePagosPage />
               </ProtectedRoute>
             }
           />
-          
+
+          {/* ── Logístico ── */}
           <Route
             path="/logistico/dashboard"
             element={
@@ -182,7 +179,34 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
+          {/* ── Finanzas ── */}
+          <Route
+            path="/finanzas/facturacion"
+            element={
+              <ProtectedRoute allowedRoles={['finanzas', 'gerencia', 'admin']}>
+                <FacturacionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finanzas/pagos"
+            element={
+              <ProtectedRoute allowedRoles={['finanzas', 'gerencia', 'admin']}>
+                <PagosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/finanzas/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={['finanzas', 'gerencia', 'admin']}>
+                <DashboardGerencial />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ── 404 ── */}
           <Route
             path="*"
             element={

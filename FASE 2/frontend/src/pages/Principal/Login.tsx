@@ -52,13 +52,13 @@ const Login: React.FC = () => {
         navigate('/logistico/dashboard');
       } else if (userRole === 'piloto') {
         navigate('/piloto/dashboard');
-      } else if (userRole === 'finanzas') {
+      } else if (userRole === 'finanzas' || userRole === 'gerencia') {
         navigate('/finanzas/dashboard');
       } else if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else {
         navigate('/panel');
-      }
+      } 
     } catch (error: unknown) {
       const message = error instanceof Error
         ? error.message

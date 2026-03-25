@@ -135,11 +135,13 @@ CREATE TABLE orden_checklist (
 CREATE TABLE orden_eventos (
     id INT IDENTITY(1,1) PRIMARY KEY,
     orden_id INT NOT NULL,
+    piloto_id INT NULL,
     tipo_evento NVARCHAR(15) NOT NULL CHECK (tipo_evento IN ('NORMAL','INCIDENTE','RETRASO','CRITICO')),
     descripcion NVARCHAR(1000) NOT NULL,
     genera_retraso BIT NOT NULL DEFAULT 0,
     fecha_hora DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_eventos_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id)
+    CONSTRAINT FK_orden_eventos_piloto FOREIGN KEY (piloto_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE orden_evidencias (

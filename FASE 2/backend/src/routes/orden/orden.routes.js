@@ -7,6 +7,8 @@ const {
   validarGenerarOrden,
   valAsignacionRecursos,
   valSalidaPatio,
+  valInicioTransito,
+  valEventosTransito,
 } = require("../../middlewares/orden/orden.validation.middleware");
 
 const router = express.Router();
@@ -26,5 +28,14 @@ router.put(
   valSalidaPatio,
   ordenController.registrarSalidaPatio,
 );
+
+// Gesitones de oredenes en la ruta
+router.put(
+  "/trasito/inicio/:id",
+  valInicioTransito,
+  ordenController.actualizarRutaTransito,
+);
+
+router.post("/eventos", valEventosTransito, ordenController.eventosTransito);
 
 module.exports = router;

@@ -113,6 +113,30 @@ async function registrarSalidaPatio(ordenId, payload) {
   };
 }
 
+async function actualizarRutaTransito(ordenId) {
+  const actualizacion = await ordenStore.actualizarRutaTransito(ordenId);
+  return {
+    mensaje: "Actualizacion Exitosa",
+    data: actualizacion,
+  };
+}
+
+async function eventosTransito(payload) {
+  try {
+    // Llamamos al store con el nombre correcto
+    const nuevoEvento = await ordenStore.registrarEventoBitacora(payload);
+
+    // Retornamos solo el objeto de datos
+    return {
+      mensaje: "Evento registrado en bitácora correctamente.",
+      data: nuevoEvento,
+    };
+  } catch (error) {
+    console.error("Error en el Service de eventos:", error);
+    // Re-lanzamos el error para que lo capture el catch del Controller
+    throw error;
+  }
+}
 module.exports = {
   generarOrden,
   optenerOrden,
@@ -120,4 +144,6 @@ module.exports = {
   getVehiculos,
   getPilotos,
   registrarSalidaPatio,
+  actualizarRutaTransito,
+  eventosTransito,
 };

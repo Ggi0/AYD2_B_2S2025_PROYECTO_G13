@@ -77,6 +77,31 @@ async function registrarSalidaPatio(req, res) {
   }
 }
 
+async function actualizarRutaTransito(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await ordenService.actualizarRutaTransito(id);
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo obtener el listado de ordenes",
+    });
+  }
+}
+
+async function eventosTransito(req, res) {
+  try {
+    const result = await ordenService.eventosTransito(req.body || {});
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo obtener el listado de ordenes",
+    });
+  }
+}
+
 module.exports = {
   generarOrden,
   optenerOrden,
@@ -84,4 +109,6 @@ module.exports = {
   getVehiculos,
   getPilotos,
   registrarSalidaPatio,
+  actualizarRutaTransito,
+  eventosTransito,
 };

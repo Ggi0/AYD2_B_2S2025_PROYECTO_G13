@@ -280,6 +280,37 @@ async function formalizarSalidaPatio(ordenId, datos) {
   return result.recordset[0];
 }
 
+async function actualizarRutaTransito(id) {
+  const pool = await getConnection();
+  const result = await pool.request().input("id", sql.Int, id).query(`
+      update ordenes
+      set estado = 'EN_TRANSITO'
+      where id = @id
+      And estado like 'LISTO_DESPACHO';
+    `);
+  return result.recordset;
+}
+
+async function registrarEventoBitacora(datos) {
+  const pool = await getConnection();
+  const result = await pool
+    .request()
+    .input("orden_id", sql.Int, datos.orden_id)
+    .input("piloto_id", sql.Int, datos.piloto_id)
+    .input("tipo_evento", sql.NVarChar, datos.tipo_evento)
+    .input("descripcion", sql.NVarChar, datos.descripcion)
+    .input("genera_retraso", sql.Bit, datos.genera_retraso || 0).query(`
+      INSERT INTO orden_eventos (
+          orden_id, piloto_id, tipo_evento, descripcion, genera_retraso, fecha_hora
+      )
+      OUTPUT INSERTED.* -- Esto permite que recordset[0] tenga los datos insertados
+      VALUES (
+          @orden_id, @piloto_id, @tipo_evento, @descripcion, @genera_retraso, GETDATE()
+      );
+    `);
+  return result.recordset[0];
+}
+
 module.exports = {
   insertarOrden,
   obtenerOrdenes,
@@ -290,4 +321,6 @@ module.exports = {
   getVehiculos,
   getPilotos,
   formalizarSalidaPatio,
+  actualizarRutaTransito,
+  registrarEventoBitacora,
 };

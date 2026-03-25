@@ -59,8 +59,42 @@ function valSalidaPatio(req, res, next) {
   next();
 }
 
+function valInicioTransito(req, res, next) {
+  const { id } = req.params;
+  if (!id || isNaN(id)) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "ID de orden inválido." });
+  }
+  next();
+}
+
+function valEventosTransito(req, res, next) {
+  const { orden_id, piloto_id, tipo_evento, descripcion, genera_retraso } =
+    req.body;
+
+  if (!orden_id || !piloto_id || !tipo_evento || !descripcion) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "Faltan campos obligatorios." });
+  }
+
+  const eventosPermitidos = ["NORMAL", "INCIDENTE", "RETRASO", "CRITICO"];
+  if (!eventosPermitidos.includes(tipo_evento)) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "Tipo de evento no válido." });
+  }
+
+  req.body.genera_retraso = !!genera_retraso;
+
+  next();
+}
+
 module.exports = {
   validarGenerarOrden,
   valAsignacionRecursos,
   valSalidaPatio,
+  valInicioTransito,
+  valEventosTransito,
 };

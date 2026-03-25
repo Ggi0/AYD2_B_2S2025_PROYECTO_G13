@@ -24,7 +24,7 @@ function validarGenerarOrden(req, res, next) {
 
 function valAsignacionRecursos(req, res, next) {
   const { id } = req.params;
-  const { vehiculo_id, piloto_id, peso_estimado, timpo_estimado } = req.body;
+  const { vehiculo_id, piloto_id, peso_estimado, tiempo_estimado } = req.body;
 
   if (!id || isNaN(id)) {
     return res
@@ -33,7 +33,7 @@ function valAsignacionRecursos(req, res, next) {
   }
 
   // Tiempo estimado en horas
-  if (!timpo_estimado || isNaN(timpo_estimado) || timpo_estimado < 0) {
+  if (!tiempo_estimado || isNaN(tiempo_estimado) || tiempo_estimado < 0) {
     return res
       .status(400)
       .json({ ok: false, mensaje: "Tiempo estimano invalido." });

@@ -26,10 +26,61 @@ async function optenerOrden(req, res) {
   }
 }
 
+async function getOrdenPendiente(req, res) {
+  try {
+    const result = await ordenService.optenerOrdenPendiente(req.body || {});
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo obtener el listado de ordenes",
+    });
+  }
+}
+
+async function getOrdenPlanificada(req, res) {
+  try {
+    const result = await ordenService.optenerOrdenPlanificada(req.body || {});
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo obtener el listado de ordenes",
+    });
+  }
+}
+
+async function getOrdenPiloto(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await ordenService.optenerOrdenPiloto(id);
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo obtener el listado de ordenes",
+    });
+  }
+}
+
 async function asignarRecursos(req, res) {
   try {
     const { id } = req.params;
     const result = await ordenService.asignarRecursos(id, req.body);
+
+    return res.status(200).json({ ok: true, ...result });
+  } catch (error) {
+    return res.status(error.statusCode || 500).json({
+      ok: false,
+      mensaje: error.message || "No se pudo asignar recursos",
+    });
+  }
+}
+
+async function optenerOrdenUsuario(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await ordenService.optenerOrdenUsuario(id, req.body);
 
     return res.status(200).json({ ok: true, ...result });
   } catch (error) {
@@ -129,4 +180,9 @@ module.exports = {
   actualizarRutaTransito,
   eventosTransito,
   actualizarRutaTransitoF,
+  getOrdenPendiente,
+  getOrdenPlanificada,
+  getOrdenPlanificada,
+  getOrdenPiloto,
+  optenerOrdenUsuario,
 };

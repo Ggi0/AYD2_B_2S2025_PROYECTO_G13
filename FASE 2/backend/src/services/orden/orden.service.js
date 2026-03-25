@@ -44,6 +44,38 @@ async function optenerOrden() {
   };
 }
 
+async function optenerOrdenPendiente() {
+  const ordenes = await ordenStore.optenerOrdenPendiente();
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: ordenes,
+  };
+}
+
+async function optenerOrdenPlanificada() {
+  const ordenes = await ordenStore.optenerOrdenPlanificada();
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: ordenes,
+  };
+}
+
+async function optenerOrdenPiloto(id_piloto) {
+  const ordenes = await ordenStore.optenerOrdenPiloto(id_piloto);
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: ordenes,
+  };
+}
+
+async function optenerOrdenUsuario(id_usuario) {
+  const ordenes = await ordenStore.optenerOrdenUsuario(id_usuario);
+  return {
+    mensaje: "Obtención de ordenes exitosa",
+    data: ordenes,
+  };
+}
+
 async function asignarRecursos(ordenId, payload) {
   const vehiculo = await ordenStore.vehiculoApto(
     payload.vehiculo_id,
@@ -88,29 +120,33 @@ async function getPilotos() {
   };
 }
 
-async function registrarSalidaPatio(ordenId, payload) {
-  // Validaciones de confirmación física
-  if (!payload.asegurada || !payload.estibada) {
-    throw crearError(
-      "La carga debe estar asegurada y estibada para autorizar la salida.",
-      403,
+async function registrarSalidaPatio(id, payload) {
+  try {
+    if (!payload.asegurada || !payload.estibada) {
+      const error = new Error("La carga debe estar asegurada y estibada.");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (!payload.peso_real || payload.peso_real <= 0) {
+      const error = new Error("Debe ingresar un peso real válido.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const ordenActualizada = await ordenStore.formalizarSalidaPatio(
+      id,
+      payload,
     );
+
+    return {
+      mensaje: "Salida de patio formalizada. Unidad en tránsito.",
+      data: ordenActualizada,
+    };
+  } catch (error) {
+    console.error("Error en el Service de salida de patio:", error.message);
+    throw error;
   }
-
-  if (!payload.peso_real || payload.peso_real <= 0) {
-    throw crearError("Debe ingresar un peso real válido.", 400);
-  }
-
-  // Llamada al store que procesa todo en la BD
-  const ordenActualizada = await ordenStore.formalizarSalidaPatio(
-    ordenId,
-    payload,
-  );
-
-  return {
-    mensaje: "Salida de patio formalizada. Unidad en tránsito.",
-    data: ordenActualizada,
-  };
 }
 
 async function actualizarRutaTransito(ordenId) {
@@ -153,4 +189,8 @@ module.exports = {
   actualizarRutaTransito,
   eventosTransito,
   finalizarRuta,
+  optenerOrdenPendiente,
+  optenerOrdenPlanificada,
+  optenerOrdenPiloto,
+  optenerOrdenUsuario,
 };

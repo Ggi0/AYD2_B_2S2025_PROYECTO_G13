@@ -3,6 +3,7 @@
 const express = require("express");
 const ordenController = require("../../controllers/orden/orden.controller");
 const { upload } = require("../../utils/multer");
+const { requireAuth } = require("../../middlewares/auth/auth.middleware");
 
 const {
   validarGenerarOrden,
@@ -14,8 +15,15 @@ const {
 } = require("../../middlewares/orden/orden.validation.middleware");
 
 const router = express.Router();
+//router.use(requireAuth); // Comentar si te falla :) (No lo probe)
+
+// Consultas Basicas de las Ordenes
 
 router.get("/", ordenController.optenerOrden);
+router.get("/pendiente", ordenController.getOrdenPendiente); // El agente logistico tiene acceso a este enpoint
+router.get("/planificada", ordenController.getOrdenPlanificada); // El agente de patio puede visualizar esta enpoint
+router.get("/piloto/:id", ordenController.getOrdenPiloto); // En esta el piloto puede ver sus ordenes en sus diferentes estado
+router.get("/usuario/:id", ordenController.optenerOrdenUsuario); // En esta el piloto puede ver sus ordenes en sus diferentes estado
 router.post("/", validarGenerarOrden, ordenController.generarOrden);
 router.put("/:id", valAsignacionRecursos, ordenController.asignarRecursos);
 

@@ -38,7 +38,7 @@ CREATE TABLE tarifario (
 
 CREATE TABLE vehiculos (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    tarifario_id INT NOT NULL,
+    tarifario_id INT NULL, 
     placa NVARCHAR(20) NOT NULL UNIQUE,
     estado NVARCHAR(15) NOT NULL DEFAULT 'DISPONIBLE' CHECK (estado IN ('DISPONIBLE','ASIGNADO','MANTENIMIENTO')),
     activo BIT NOT NULL DEFAULT 1,
@@ -111,6 +111,7 @@ CREATE TABLE ordenes (
     tiempo_estimado DECIMAL(16,2) NOT NULL,
     peso_real DECIMAL(10,2) NULL,
     tarifa_aplicada DECIMAL(10,2) NULL,
+    costo numeric(10,2) NOT NULL,
     estado NVARCHAR(30) NOT NULL DEFAULT 'PENDIENTE_PLANIFICACION' CHECK (estado IN ('PENDIENTE_PLANIFICACION','PLANIFICADA','LISTO_DESPACHO','EN_TRANSITO','ENTREGADA','CERRADA')),
     vehiculo_id INT NULL,
     piloto_id INT NULL,

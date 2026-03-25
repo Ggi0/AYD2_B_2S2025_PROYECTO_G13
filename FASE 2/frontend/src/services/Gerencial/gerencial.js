@@ -5,8 +5,12 @@ import apiService from "../api";
  * Corte diario de operaciones y facturación por sede
  * GET /api/gerencial/corte-diario
  */
-export const getCorteDiario = async () => {
-  return apiService["request"]("/gerencial/corte-diario", { method: "GET" });
+export const getCorteDiario = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.fecha) query.append("fecha", params.fecha);
+  if (params.sede) query.append("sede", params.sede);
+  const url = `/gerencial/corte-diario${query.toString() ? "?" + query.toString() : ""}`;
+  return apiService["request"](url, { method: "GET" });
 };
 
 /**
@@ -27,6 +31,10 @@ export const getKPIs = async (params = {}) => {
  * Alertas de desviación (clientes con baja carga, rutas con exceso de costo)
  * GET /api/gerencial/alertas
  */
-export const getAlertas = async () => {
-  return apiService["request"]("/gerencial/alertas", { method: "GET" });
+export const getAlertas = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.desde) query.append("desde", params.desde);
+  if (params.hasta) query.append("hasta", params.hasta);
+  const url = `/gerencial/alertas${query.toString() ? "?" + query.toString() : ""}`;
+  return apiService["request"](url, { method: "GET" });
 };

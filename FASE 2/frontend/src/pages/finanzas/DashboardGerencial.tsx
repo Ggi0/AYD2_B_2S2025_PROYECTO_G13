@@ -53,7 +53,7 @@ type Alerta = {
 const SEDES = [
   { key: "guatemala", label: "Guatemala" },
   { key: "xela", label: "Xela" },
-  { key: "puerto_barrios", label: "Puerto Barrios" },
+  { key: "puerto barrios", label: "Puerto Barrios" },
 ];
 
 
@@ -90,26 +90,65 @@ const DashboardGerencial: React.FC = () => {
   const hoy = new Date().toISOString().split("T")[0];
   const hace30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
+  const normalizeSedeText = (value: string = "") =>
+    value.toLowerCase().replaceAll("_", " ").replaceAll("á", "a").replaceAll("é", "e").trim();
+
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [corteRes, kpisRes, alertasRes] = await Promise.allSettled([
-        getCorteDiario(),
+        getCorteDiario({ sede: sedeSeleccionada }),
         getKPIs({ desde: hace30, hasta: hoy, sede: sedeSeleccionada }),
-        getAlertas(),
+        getAlertas({ desde: hace30, hasta: hoy }),
       ]);
 
       if (corteRes.status === "fulfilled") {
         const data = corteRes.value.data;
-        setCorte(Array.isArray(data) ? data : data ? [data] : []);
+        const porSede = Array.isArray(data?.porSede) ? data.porSede : [];
+        setCorte(
+          porSede.map((item: any) => ({
+            sede: item.sede,
+            total_ordenes: item.totalOrdenes,
+            ordenes_entregadas: item.entregadas,
+            ordenes_en_transito: item.enTransito,
+            ordenes_pendientes: Math.max((item.totalOrdenes ?? 0) - (item.entregadas ?? 0), 0),
+            total_facturado: item.totalFacturado,
+            total_cobrado: item.totalFacturado,
+          }))
+        );
       }
       if (kpisRes.status === "fulfilled") {
-        setKpis(kpisRes.value.data || {});
+        const data = kpisRes.value.data;
+        const resumen = data?.resumen || {};
+        setKpis({
+          ingresos: resumen.ingresos,
+          costos: resumen.costos,
+          rentabilidad: resumen.rentabilidadMonto,
+          margen_porcentaje: resumen.rentabilidadPorcentaje,
+          ordenes_a_tiempo: (data?.porSede || []).reduce((acc: number, row: any) => acc + (row.ordenesATiempo || 0), 0),
+          total_ordenes: (data?.porSede || []).reduce((acc: number, row: any) => acc + (row.ordenesConMedicion || 0), 0),
+        });
       }
       if (alertasRes.status === "fulfilled") {
         const data = alertasRes.value.data;
-        setAlertas(Array.isArray(data) ? data : data ? [data] : []);
+        const clientes = (data?.clientesBajaCarga || []).map((item: any, idx: number) => ({
+          id: idx + 1,
+          tipo: "BAJA_CARGA",
+          mensaje: item.mensaje,
+          cliente_nombre: item.cliente,
+          severidad: item.severidad,
+        }));
+
+        const rutas = (data?.rutasExcesoConsumo || []).map((item: any, idx: number) => ({
+          id: clientes.length + idx + 1,
+          tipo: "EXCESO_CONSUMO",
+          mensaje: item.mensaje,
+          ruta: item.ruta,
+          severidad: item.severidad,
+        }));
+
+        setAlertas([...clientes, ...rutas]);
       }
     } catch {
       setError("Error al cargar el dashboard.");
@@ -139,7 +178,8 @@ const DashboardGerencial: React.FC = () => {
   const maxGanancia = Math.max(...contratos.map((c) => Math.abs(c.ganancia ?? 0)), 1);
 
   // Corte filtrado por sede seleccionada (si el backend devuelve por sede)
-  const corteSede = corte.find((c) => c.sede?.toLowerCase().includes(sedeSeleccionada)) ?? corte[0];
+  const corteSede =
+    corte.find((c) => normalizeSedeText(c.sede).includes(normalizeSedeText(sedeSeleccionada))) ?? corte[0];
 
   if (loading) {
     return (

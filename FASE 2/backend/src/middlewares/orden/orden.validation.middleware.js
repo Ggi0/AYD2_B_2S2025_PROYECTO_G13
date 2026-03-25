@@ -24,12 +24,19 @@ function validarGenerarOrden(req, res, next) {
 
 function valAsignacionRecursos(req, res, next) {
   const { id } = req.params;
-  const { vehiculo_id, piloto_id, peso_estimado } = req.body;
+  const { vehiculo_id, piloto_id, peso_estimado, timpo_estimado } = req.body;
 
   if (!id || isNaN(id)) {
     return res
       .status(400)
       .json({ ok: false, mensaje: "ID de orden inválido." });
+  }
+
+  // Tiempo estimado en horas
+  if (!timpo_estimado || isNaN(timpo_estimado) || timpo_estimado < 0) {
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "Tiempo estimano invalido." });
   }
 
   if (!vehiculo_id || !piloto_id || !peso_estimado) {
@@ -91,10 +98,29 @@ function valEventosTransito(req, res, next) {
   next();
 }
 
+function valFinalizarEntrega(req, res, next) {
+  const { id } = req.params;
+
+  // Validamos req.files (que es donde Multer pone los archivos)
+  if (!id)
+    return res
+      .status(400)
+      .json({ ok: false, mensaje: "ID de orden inválido." });
+
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "Debe adjuntar al menos una imagen de evidencia.",
+    });
+  }
+  next();
+}
+
 module.exports = {
   validarGenerarOrden,
   valAsignacionRecursos,
   valSalidaPatio,
   valInicioTransito,
   valEventosTransito,
+  valFinalizarEntrega,
 };

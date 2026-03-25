@@ -137,6 +137,12 @@ async function eventosTransito(payload) {
     throw error;
   }
 }
+
+async function finalizarRuta(id, rutasArchivos) {
+  const result = await ordenStore.finalizarEntrega(id, rutasArchivos);
+  return result;
+}
+
 module.exports = {
   generarOrden,
   optenerOrden,
@@ -146,4 +152,5 @@ module.exports = {
   registrarSalidaPatio,
   actualizarRutaTransito,
   eventosTransito,
+  finalizarRuta,
 };

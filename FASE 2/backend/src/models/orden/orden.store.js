@@ -98,7 +98,7 @@ async function insertarOrden(datos) {
       END TRY
       BEGIN CATCH
         ROLLBACK TRANSACTION;
-        THROW; -- Lanza el error para que el service lo capture
+        THROW;
       END CATCH
     `);
 
@@ -161,13 +161,15 @@ async function actualizarAsignacion(ordenId, datos) {
     .request()
     .input("id", sql.Int, ordenId)
     .input("piloto_id", sql.Int, datos.piloto_id)
-    .input("vehiculo_id", sql.Int, datos.vehiculo_id).query(`
+    .input("vehiculo_id", sql.Int, datos.vehiculo_id)
+    .input("tiempo_estimado", sql.Numeric(16, 2), datos.tiempo_estimado).query(`
       BEGIN TRANSACTION;
       BEGIN TRY
         UPDATE ordenes
         SET vehiculo_id = @vehiculo_id, 
             piloto_id = @piloto_id,
-            estado = 'PLANIFICADA'
+            estado = 'PLANIFICADA',
+            tiempo_estimado = @tiempo_estimado
         WHERE id = @id;
 
         UPDATE vehiculos
@@ -208,6 +210,7 @@ async function getPilotos() {
     `);
   return result.recordset;
 }
+
 async function formalizarSalidaPatio(ordenId, datos) {
   const pool = await getConnection();
   const result = await pool
@@ -255,7 +258,8 @@ async function formalizarSalidaPatio(ordenId, datos) {
         UPDATE ordenes 
         SET peso_real = @peso_real,
             costo = @v_nuevo_costo,
-            estado = 'LISTO_DESPACHO' -- Estado de salida de patio
+            estado = 'LISTO_DESPACHO', -- Estado de salida de patio
+            fecha_despacho = GETDATE() 
         WHERE id = @orden_id;
 
         -- 6. Sincronizar el saldo del contrato con el nuevo costo real
@@ -303,7 +307,7 @@ async function registrarEventoBitacora(datos) {
       INSERT INTO orden_eventos (
           orden_id, piloto_id, tipo_evento, descripcion, genera_retraso, fecha_hora
       )
-      OUTPUT INSERTED.* -- Esto permite que recordset[0] tenga los datos insertados
+      OUTPUT INSERTED.* 
       VALUES (
           @orden_id, @piloto_id, @tipo_evento, @descripcion, @genera_retraso, GETDATE()
       );
@@ -311,6 +315,95 @@ async function registrarEventoBitacora(datos) {
   return result.recordset[0];
 }
 
+async function finalizarEntrega(ordenId, rutasArchivos) {
+  const pool = await getConnection();
+  const transaction = new sql.Transaction(pool);
+
+  try {
+    await transaction.begin();
+
+    // 1. Validar estado actual y obtener datos necesarios (vehiculo y tiempo estimado)
+    const infoOrden = await transaction.request().input("id", sql.Int, ordenId)
+      .query(`
+        SELECT vehiculo_id, estado, tiempo_estimado 
+        FROM ordenes 
+        WHERE id = @id
+      `);
+
+    const orden = infoOrden.recordset[0];
+
+    // Validación de existencia y estado
+    if (!orden) {
+      throw new Error("La orden especificada no existe.");
+    }
+
+    if (orden.estado !== "EN_TRANSITO") {
+      throw new Error(
+        `No se puede finalizar la entrega: La orden se encuentra en estado '${orden.estado}' y debe estar en 'EN_TRANSITO'.`,
+      );
+    }
+
+    const vehiculoId = orden.vehiculo_id;
+    const tiempoEstimadoHoras = orden.tiempo_estimado || 0; // Usando tu nueva columna
+
+    // 2. Actualizar Orden (Estado Final y Fecha de Entrega)
+    // Pasamos a CERRADA directamente ya que el piloto documentó todo
+    await transaction.request().input("orden_id", sql.Int, ordenId).query(`
+        UPDATE ordenes 
+        SET estado = 'CERRADA', 
+            fecha_entrega = GETDATE() 
+        WHERE id = @orden_id;
+      `);
+
+    // 3. Liberar Vehículo
+    if (vehiculoId) {
+      await transaction
+        .request()
+        .input("v_id", sql.Int, vehiculoId)
+        .query("UPDATE vehiculos SET estado = 'DISPONIBLE' WHERE id = @v_id;");
+    }
+
+    // 4. Guardar Evidencias (Rutas de archivos)
+    for (const ruta of rutasArchivos) {
+      await transaction
+        .request()
+        .input("orden_id", sql.Int, ordenId)
+        .input("url", sql.NVarChar, ruta)
+        .query(
+          "INSERT INTO orden_evidencias (orden_id, url_archivo) VALUES (@orden_id, @url);",
+        );
+    }
+
+    // 5. Registro de KPI basado en tiempo_estimado (Cálculos en HORAS)
+    await transaction
+      .request()
+      .input("orden_id", sql.Int, ordenId)
+      .input("t_estimado_horas", sql.Numeric(16, 2), tiempoEstimadoHoras)
+      .query(`
+        INSERT INTO orden_kpi (orden_id, tiempo_planificado, tiempo_real, retraso, fecha_calculo)
+        SELECT 
+            id, 
+            @t_estimado_horas, -- Tiempo que ya venía en horas
+            -- Calculamos la diferencia en minutos y dividimos por 60.0 para obtener horas decimales
+            CAST(DATEDIFF(MINUTE, fecha_despacho, fecha_entrega) / 60.0 AS NUMERIC(16,2)),
+            -- Cálculo del retraso: Si el real es mayor al estimado, restamos; si no, es 0
+            CASE 
+                WHEN (DATEDIFF(MINUTE, fecha_despacho, fecha_entrega) / 60.0) > @t_estimado_horas 
+                THEN CAST((DATEDIFF(MINUTE, fecha_despacho, fecha_entrega) / 60.0) - @t_estimado_horas AS NUMERIC(16,2))
+                ELSE 0 
+            END,
+            GETDATE()
+        FROM ordenes 
+        WHERE id = @orden_id;
+      `);
+
+    await transaction.commit();
+    return { ordenId, vehiculoLiberado: vehiculoId, estadoFinal: "CERRADA" };
+  } catch (error) {
+    if (transaction) await transaction.rollback();
+    throw error;
+  }
+}
 module.exports = {
   insertarOrden,
   obtenerOrdenes,
@@ -323,4 +416,5 @@ module.exports = {
   formalizarSalidaPatio,
   actualizarRutaTransito,
   registrarEventoBitacora,
+  finalizarEntrega,
 };

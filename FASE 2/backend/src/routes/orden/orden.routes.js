@@ -2,6 +2,7 @@
 
 const express = require("express");
 const ordenController = require("../../controllers/orden/orden.controller");
+const { upload } = require("../../utils/multer");
 
 const {
   validarGenerarOrden,
@@ -9,6 +10,7 @@ const {
   valSalidaPatio,
   valInicioTransito,
   valEventosTransito,
+  valFinalizarEntrega,
 } = require("../../middlewares/orden/orden.validation.middleware");
 
 const router = express.Router();
@@ -37,5 +39,12 @@ router.put(
 );
 
 router.post("/eventos", valEventosTransito, ordenController.eventosTransito);
+
+router.post(
+  "/trasito/fin/:id",
+  upload.array("evidencias", 5),
+  valFinalizarEntrega,
+  ordenController.actualizarRutaTransitoF,
+);
 
 module.exports = router;

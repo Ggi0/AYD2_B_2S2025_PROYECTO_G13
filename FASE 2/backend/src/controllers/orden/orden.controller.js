@@ -102,6 +102,23 @@ async function eventosTransito(req, res) {
   }
 }
 
+async function actualizarRutaTransitoF(req, res) {
+  try {
+    const { id } = req.params;
+    // Extraemos las rutas de los archivos
+    const rutasArchivos = req.files.map((f) => f.path);
+
+    // Llamamos al service solo con los datos necesarios
+    const result = await ordenService.finalizarRuta(id, rutasArchivos);
+
+    res.status(200).json({ ok: true, data: result });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ ok: false, mensaje: error.message });
+  }
+}
+
 module.exports = {
   generarOrden,
   optenerOrden,
@@ -111,4 +128,5 @@ module.exports = {
   registrarSalidaPatio,
   actualizarRutaTransito,
   eventosTransito,
+  actualizarRutaTransitoF,
 };

@@ -25,11 +25,12 @@ router.get('/', (req, res) => {
       ok: true,
       mensaje: 'Dentro de la API'
     });
-  });
+});
 
 // Importar rutas por módulo
-const facturacionRoutes = require('./facturacion/routes_factuacion');
-const authRoutes = require('./auth/auth.routes');
+const facturacionRoutes = require("./facturacion/routes_factuacion");
+const authRoutes = require("./auth/auth.routes");
+const ordenRoutes = require("./orden/orden.routes");
 
 // otras carpetas por ejemplo:
 // const contratosRoutes = require('./contratos/routes_contratos');
@@ -42,6 +43,7 @@ const tarifarioRoutes = require('./tarifario/tarifarioRoutes');
 const gerencialRoutes = require('./gerencial/dashboard.routes');
 
 // Convención general:
+router.use('/orden', ordenRoutes);
 // /api/modulo
 router.use('/facturacion', facturacionRoutes);
 router.use('/auth', authRoutes);
@@ -49,6 +51,7 @@ router.use('/usuarios',    usuarioRoutes);
 router.use('/contratos',   contratoRoutes);
 router.use('/tarifario',   tarifarioRoutes);
 router.use('/gerencial',   gerencialRoutes);
+router.use("/orden", ordenRoutes);
 //  /api/contratos
 //  router.use('/contratos', contratosRoutes);
 

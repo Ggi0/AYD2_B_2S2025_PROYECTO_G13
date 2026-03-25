@@ -38,12 +38,12 @@ CREATE TABLE tarifario (
 
 CREATE TABLE vehiculos (
     id INT IDENTITY(1,1) PRIMARY KEY,
+    tarifario_id INT NULL, 
     placa NVARCHAR(20) NOT NULL UNIQUE,
-    tipo_unidad NVARCHAR(10) NOT NULL CHECK (tipo_unidad IN ('LIGERA','PESADA','CABEZAL')),
-    capacidad_ton DECIMAL(5,2) NOT NULL,
     estado NVARCHAR(15) NOT NULL DEFAULT 'DISPONIBLE' CHECK (estado IN ('DISPONIBLE','ASIGNADO','MANTENIMIENTO')),
     activo BIT NOT NULL DEFAULT 1,
     creado_por INT NOT NULL,
+    CONSTRAINT FK_tarifario_id FOREIGN KEY (tarifario_id) REFERENCES tarifario(id),
     CONSTRAINT FK_vehiculos_creado_por FOREIGN KEY (creado_por) REFERENCES usuarios(id)
 );
 
@@ -108,8 +108,10 @@ CREATE TABLE ordenes (
     destino NVARCHAR(100) NOT NULL,
     tipo_mercancia NVARCHAR(100) NOT NULL,
     peso_estimado DECIMAL(10,2) NOT NULL,
+    tiempo_estimado DECIMAL(16,2) NOT NULL,
     peso_real DECIMAL(10,2) NULL,
     tarifa_aplicada DECIMAL(10,2) NULL,
+    costo numeric(10,2) NOT NULL,
     estado NVARCHAR(30) NOT NULL DEFAULT 'PENDIENTE_PLANIFICACION' CHECK (estado IN ('PENDIENTE_PLANIFICACION','PLANIFICADA','LISTO_DESPACHO','EN_TRANSITO','ENTREGADA','CERRADA')),
     vehiculo_id INT NULL,
     piloto_id INT NULL,
@@ -135,11 +137,13 @@ CREATE TABLE orden_checklist (
 CREATE TABLE orden_eventos (
     id INT IDENTITY(1,1) PRIMARY KEY,
     orden_id INT NOT NULL,
+    piloto_id INT NULL,
     tipo_evento NVARCHAR(15) NOT NULL CHECK (tipo_evento IN ('NORMAL','INCIDENTE','RETRASO','CRITICO')),
     descripcion NVARCHAR(1000) NOT NULL,
     genera_retraso BIT NOT NULL DEFAULT 0,
     fecha_hora DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_eventos_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id)
+    CONSTRAINT FK_orden_eventos_piloto FOREIGN KEY (piloto_id) REFERENCES usuarios(id)
 );
 
 CREATE TABLE orden_evidencias (

@@ -1,16 +1,16 @@
-import React, { useMemo, useState } from 'react';
-import { FaUser, FaTruck, FaUserTie, FaMapMarkerAlt, FaFileInvoice, FaShieldAlt } from 'react-icons/fa';
+// src/pages/Registro/TiposRegistro.tsx
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '../../components/principal/MainLayout';
 import { registerRequest } from '../../services/auth/authApi';
+import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
 const TiposRegistro: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    nit: '',
     nombres: '',
     apellidos: '',
     telefono: '',
@@ -18,13 +18,6 @@ const TiposRegistro: React.FC = () => {
     password: '',
     confirmPassword: '',
   });
-
-  const roleLabel = useMemo(() => {
-    if (selectedRole === 'cliente') return 'Cliente';
-    if (selectedRole === 'piloto') return 'Piloto';
-    if (selectedRole === 'finanzas') return 'Finanzas';
-    return '';
-  }, [selectedRole]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -34,17 +27,11 @@ const TiposRegistro: React.FC = () => {
     }));
   };
 
-  const handleRoleSelect = (role: string) => {
-    setSelectedRole(role);
-    setError(null);
-    setSuccess(null);
-  };
-
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!selectedRole) {
-      setError('Selecciona un tipo de cuenta antes de registrarte.');
+    
+    if (formData.password !== formData.confirmPassword) {
+      setError('Las contraseñas no coinciden.');
       return;
     }
 
@@ -54,17 +41,24 @@ const TiposRegistro: React.FC = () => {
 
     try {
       const response = await registerRequest({
+        nit: formData.nit,
         email: formData.email,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        role: selectedRole,
+        role: 'cliente',
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         telefono: formData.telefono,
       });
 
       setSuccess(`${response.mensaje} Ahora puedes iniciar sesión.`);
+      
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
+      
       setFormData({
+        nit: '',
         nombres: '',
         apellidos: '',
         telefono: '',
@@ -80,293 +74,231 @@ const TiposRegistro: React.FC = () => {
     }
   };
 
-  const handleClienteClick = () => handleRoleSelect('cliente');
-
-  const handlePilotoClick = () => handleRoleSelect('piloto');
-
-  const handleAdminClick = () => handleRoleSelect('finanzas');
-
   const handleLoginClick = () => {
     navigate('/login');
   };
 
+  const handleRegisterClick = () => {
+    navigate('/registro/tipos');
+  };
+
   return (
-    <MainLayout>
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 via-blue-900 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-white mb-4">
-              Crear Cuenta
-            </h1>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Selecciona el tipo de cuenta que deseas crear para acceder al sistema logístico de LogiTrans
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* Tarjeta Cliente */}
-            <div 
-              onClick={handleClienteClick}
-              className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border border-blue-500/20 hover:border-blue-500/40 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 group-hover:bg-blue-500/30 transition-colors duration-300">
-                  <FaUser className="text-4xl text-blue-400" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
+      {/* MenuPrincipal at the top with dark blue background */}
+      <div className="bg-blue-900 shadow-lg">
+        <MenuPrincipal onLoginClick={handleLoginClick} onRegisterClick={handleRegisterClick} />
+      </div>
+      
+      {/* Main content with registration form */}
+      <div className="flex justify-center items-center">
+        {/* Left: Image */}
+        <div className="w-1/2 h-screen hidden lg:block relative">
+          <img 
+            src="https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
+            alt="Camión de carga en carretera" 
+            className="object-cover w-full h-full"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/80 to-indigo-900/80 flex flex-col justify-center items-center p-12">
+            <div className="text-white text-center">
+              <h2 className="text-4xl font-bold mb-4">LogiTrans</h2>
+              <p className="text-xl mb-6">Tu socio estratégico en logística</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Transporte seguro y eficiente</span>
                 </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  Cliente
-                </h2>
-                
-                <p className="text-gray-400 mb-6">
-                  Empresa que requiere servicios de transporte y logística para sus operaciones
-                </p>
-                
-                <div className="space-y-3 text-left w-full mb-8">
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-blue-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Gestión de órdenes de servicio</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-blue-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Seguimiento en tiempo real</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-blue-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Facturación electrónica (FEL)</span>
-                  </div>
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Seguimiento en tiempo real</span>
                 </div>
-                
-                <button className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-300">
-                  Registrarse como Cliente
-                </button>
-              </div>
-            </div>
-
-            {/* Tarjeta Piloto */}
-            <div 
-              onClick={handlePilotoClick}
-              className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border border-purple-500/20 hover:border-purple-500/40 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-purple-500/20 flex items-center justify-center mb-6 group-hover:bg-purple-500/30 transition-colors duration-300">
-                  <FaTruck className="text-4xl text-purple-400" />
+                <div className="flex items-center justify-center space-x-2">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  <span>Cobertura nacional</span>
                 </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  Piloto
-                </h2>
-                
-                <p className="text-gray-400 mb-6">
-                  Conductor de unidades de transporte que realiza las entregas y gestiona la bitácora de ruta
-                </p>
-                
-                <div className="space-y-3 text-left w-full mb-8">
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-purple-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Registro de estados de envío</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-purple-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Bitácora digital de ruta</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-purple-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Evidencia digital de entregas</span>
-                  </div>
-                </div>
-                
-                <button className="w-full py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-colors duration-300">
-                  Registrarse como Piloto
-                </button>
-              </div>
-            </div>
-
-            {/* Tarjeta Administrador */}
-            <div 
-              onClick={handleAdminClick}
-              className="bg-white/5 backdrop-blur-sm rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl border border-amber-500/20 hover:border-amber-500/40 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-amber-500/20 flex items-center justify-center mb-6 group-hover:bg-amber-500/30 transition-colors duration-300">
-                  <FaUserTie className="text-4xl text-amber-400" />
-                </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-4">
-                  Finanzas
-                </h2>
-                
-                <p className="text-gray-400 mb-6">
-                  Personal de LogiTrans que gestiona clientes, pilotos, contratos y operaciones
-                </p>
-                
-                <div className="space-y-3 text-left w-full mb-8">
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Gestión de contratos y tarifarios</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Dashboard con KPIs gerenciales</span>
-                  </div>
-                  <div className="flex items-center text-gray-300">
-                    <svg className="w-5 h-5 text-amber-400 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <span>Control de crédito y facturación</span>
-                  </div>
-                </div>
-                
-                <button className="w-full py-3 px-6 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors duration-300">
-                  Registrarse como Administrador
-                </button>
               </div>
             </div>
           </div>
-
-          <div className="max-w-3xl mx-auto mt-12 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 md:p-8">
-            <h3 className="text-2xl font-bold text-white mb-2">Formulario de Registro</h3>
-            <p className="text-sm text-gray-300 mb-6">
-              {selectedRole ? `Tipo de cuenta seleccionado: ${roleLabel}` : 'Selecciona arriba un tipo de cuenta para continuar.'}
-            </p>
-
+        </div>
+        
+        {/* Right: Registration Form */}
+        <div className="lg:p-36 md:p-52 sm:20 p-8 w-full lg:w-1/2 bg-white/90 backdrop-blur-sm">
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-8 mt-16">
+              <h1 className="text-3xl font-bold text-gray-800 mb-2">Crear Cuenta</h1>
+              <p className="text-gray-600">Únete a LogiTrans y optimiza tu logística</p>
+            </div>
+            
             {error && (
-              <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-red-200 text-sm">
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="mb-4 rounded-lg border border-emerald-500/50 bg-emerald-500/10 px-4 py-3 text-emerald-200 text-sm">
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-700 text-sm">
                 {success}
               </div>
             )}
 
-            <form onSubmit={handleRegisterSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                name="nombres"
-                value={formData.nombres}
-                onChange={handleInputChange}
-                placeholder="Nombres"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-              <input
-                name="apellidos"
-                value={formData.apellidos}
-                onChange={handleInputChange}
-                placeholder="Apellidos"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-              <input
-                name="telefono"
-                value={formData.telefono}
-                onChange={handleInputChange}
-                placeholder="Teléfono"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-              <input
-                name="email"
-                type="email"
-                required
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Correo electrónico"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-              <input
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="Contraseña"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="Confirmar contraseña"
-                className="bg-slate-900/70 text-white border border-slate-700 rounded-lg px-4 py-3 outline-none focus:border-blue-400"
-              />
-
-              <div className="md:col-span-2 mt-2">
-                <button
-                  type="submit"
-                  disabled={isLoading || !selectedRole}
-                  className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900/60 text-white font-semibold py-3 transition"
-                >
-                  {isLoading ? 'Registrando...' : 'Crear cuenta'}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* Features adicionales */}
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-blue-500/20">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                <FaMapMarkerAlt className="text-blue-400" />
-              </div>
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
               <div>
-                <p className="font-semibold text-white">Cobertura Nacional</p>
-                <p className="text-sm text-gray-400">Guatemala, Xela, Pto. Barrios</p>
+                <label htmlFor="nit" className="block text-gray-700 font-medium mb-2">NIT</label>
+                <input 
+                  type="text" 
+                  id="nit" 
+                  name="nit"
+                  required
+                  value={formData.nit}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                  placeholder="Ingresa tu NIT"
+                />
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-blue-500/20">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                <FaFileInvoice className="text-blue-400" />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="nombres" className="block text-gray-700 font-medium mb-2">Nombres</label>
+                  <input 
+                    type="text" 
+                    id="nombres" 
+                    name="nombres"
+                    value={formData.nombres}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                    placeholder="Juan"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="apellidos" className="block text-gray-700 font-medium mb-2">Apellidos</label>
+                  <input 
+                    type="text" 
+                    id="apellidos" 
+                    name="apellidos"
+                    value={formData.apellidos}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                    placeholder="Pérez"
+                  />
+                </div>
               </div>
+
               <div>
-                <p className="font-semibold text-white">Facturación FEL</p>
-                <p className="text-sm text-gray-400">Integración con SAT</p>
+                <label htmlFor="telefono" className="block text-gray-700 font-medium mb-2">Teléfono</label>
+                <input 
+                  type="tel" 
+                  id="telefono" 
+                  name="telefono"
+                  value={formData.telefono}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                  placeholder="1234-5678"
+                />
               </div>
-            </div>
 
-            <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-blue-500/20">
-              <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                <FaShieldAlt className="text-blue-400" />
-              </div>
               <div>
-                <p className="font-semibold text-white">Control de Crédito</p>
-                <p className="text-sm text-gray-400">Bloqueo automático</p>
+                <label htmlFor="email" className="block text-gray-700 font-medium mb-2">Correo Electrónico</label>
+                <input 
+                  type="email" 
+                  id="email" 
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                  placeholder="juan.perez@email.com"
+                />
               </div>
-            </div>
-          </div>
 
-          <div className="text-center mt-12">
-            <p className="text-gray-400">
-              ¿Ya tienes una cuenta?{' '}
-              <button
-                onClick={handleLoginClick}
-                className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2"
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="password" className="block text-gray-700 font-medium mb-2">Contraseña</label>
+                  <input 
+                    type="password" 
+                    id="password" 
+                    name="password"
+                    required
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                    placeholder="********"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">Confirmar Contraseña</label>
+                  <input 
+                    type="password" 
+                    id="confirmPassword" 
+                    name="confirmPassword"
+                    required
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
+                    placeholder="********"
+                  />
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-lg py-3 px-4 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
-                Inicia sesión aquí
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Registrando...
+                  </span>
+                ) : 'Registrarse'}
               </button>
-            </p>
+            </form>
+
+            <div className="mt-6 text-center">
+              <p className="text-gray-600">
+                ¿Ya tienes una cuenta?{' '}
+                <button
+                  onClick={handleLoginClick}
+                  className="text-blue-600 hover:text-blue-700 font-semibold hover:underline transition-all duration-300"
+                >
+                  Inicia sesión aquí
+                </button>
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="flex justify-center space-x-6">
+                <div className="text-center">
+                  <svg className="w-6 h-6 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-gray-500">24/7 Disponible</p>
+                </div>
+                <div className="text-center">
+                  <svg className="w-6 h-6 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <p className="text-xs text-gray-500">100% Seguro</p>
+                </div>
+                <div className="text-center">
+                  <svg className="w-6 h-6 text-blue-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                  <p className="text-xs text-gray-500">Soporte Especializado</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 

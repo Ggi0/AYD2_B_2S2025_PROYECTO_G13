@@ -1,6 +1,7 @@
+// backend/src/middlewares/auth/auth.validation.middleware.js
 "use strict";
 
-const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo"];
+const ALLOWED_ROLES = ["cliente", "piloto", "finanzas", "gerencia", "operativo", "agente_logistico"];
 
 function isValidEmail(email) {
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -9,16 +10,24 @@ function isValidEmail(email) {
 
 function validateRegister(req, res, next) {
   const {
+    nit,
     email,
     password,
     confirmPassword,
     role = "cliente",
   } = req.body || {};
 
-  if (!email || !password || !confirmPassword) {
+  if (!nit || !email || !password || !confirmPassword) {
     return res.status(400).json({
       ok: false,
-      mensaje: "Email, password y confirmPassword son obligatorios",
+      mensaje: "NIT, email, password y confirmPassword son obligatorios",
+    });
+  }
+
+  if (String(nit).trim().length > 13) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "El NIT no puede tener más de 13 caracteres",
     });
   }
 

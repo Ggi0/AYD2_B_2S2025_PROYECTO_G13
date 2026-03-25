@@ -1,10 +1,9 @@
-// src/pages/Principal/Login.tsx (actualizado con las rutas correctas)
 import React, { useState } from 'react';
 import { FaTruck, FaEye, FaEyeSlash, FaMapMarkerAlt, FaShieldAlt, FaClock } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '../../components/principal/MainLayout';
 import { loginRequest } from '../../services/auth/authApi';
 import { useAuth } from '../../context/AuthContext';
+import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -16,28 +15,6 @@ const Login: React.FC = () => {
     email: '',
     password: ''
   });
-
-  // Credenciales de ejemplo para diferentes roles con rutas CORREGIDAS
-  const users = {
-    client: {
-      email: 'cliente@logitrans.com',
-      password: 'cliente123',
-      role: 'client',
-      redirect: '/client/dashboard'  // Ruta CORREGIDA
-    },
-    admin: {
-      email: 'admin@logitrans.com',
-      password: 'admin123',
-      role: 'admin',
-      redirect: '/admin/dashboard'
-    },
-    operator: {
-      email: 'operador@logitrans.com',
-      password: 'operador123',
-      role: 'operator',
-      redirect: '/operator/dashboard'
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -53,38 +30,6 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-      // Simulación de llamada al backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Validación de credenciales
-      let userFound = null;
-      
-      for (const [key, user] of Object.entries(users)) {
-        if (formData.email === user.email && formData.password === user.password) {
-          userFound = user;
-          break;
-        }
-      }
-      
-      if (userFound) {
-        console.log('Login exitoso:', formData.email, 'Rol:', userFound.role);
-        
-        // Guardar información de sesión
-        localStorage.setItem('userToken', 'fake-jwt-token-' + Date.now());
-        localStorage.setItem('userRole', userFound.role);
-        localStorage.setItem('userEmail', formData.email);
-        
-        // Mostrar mensaje de éxito
-        alert(`¡Bienvenido! Redirigiendo al dashboard de ${userFound.role}`);
-        
-        // Redirigir según el rol con las rutas CORREGIDAS
-        console.log('Redirigiendo a:', userFound.redirect);
-        navigate(userFound.redirect);
-      } else {
-        setError('Credenciales inválidas. Verifica tu email y contraseña.');
-      }
-    } catch (error) {
-      setError('Error de conexión. Por favor, intenta nuevamente.');
       const response = await loginRequest({
         email: formData.email,
         password: formData.password,
@@ -94,9 +39,26 @@ const Login: React.FC = () => {
         id: response.data.user.id,
         email: response.data.user.email,
         role: response.data.user.role,
+        nombres: response.data.user.nombres,
+        apellidos: response.data.user.apellidos,
       });
 
-      navigate('/panel');
+      const userRole = response.data.user.role?.toLowerCase();
+      
+      // Redirigir según el rol del usuario
+      if (userRole === 'client' || userRole === 'cliente') {
+        navigate('/client/dashboard');
+      } else if (['logistic', 'logistico', 'operativo'].includes(userRole)) {
+        navigate('/logistico/dashboard');
+      } else if (userRole === 'piloto') {
+        navigate('/piloto/dashboard');
+      } else if (userRole === 'finanzas') {
+        navigate('/finanzas/dashboard');
+      } else if (userRole === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/panel');
+      }
     } catch (error: unknown) {
       const message = error instanceof Error
         ? error.message
@@ -111,11 +73,21 @@ const Login: React.FC = () => {
     navigate('/registro/tipos');
   };
 
+  const handleLoginClick = () => {
+    navigate('/login');
+  };
+
   return (
-    <MainLayout>
-      <div className="min-h-[calc(100vh-80px)] grid grid-cols-1 md:grid-cols-12 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-white">
+      {/* MenuPrincipal at the top with dark blue background */}
+      <div className="bg-blue-900 shadow-lg">
+        <MenuPrincipal onLoginClick={handleLoginClick} onRegisterClick={handleRegisterClick} />
+      </div>
+      
+      {/* Main content - Login Form and Image */}
+      <div className="grid grid-cols-1 md:grid-cols-12 relative">
         {/* Columna izquierda - Formulario */}
-        <div className="col-span-1 md:col-span-5 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 text-white p-8 md:p-12 relative">
+        <div className="col-span-1 md:col-span-5 bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-900 text-white p-8 md:p-12 relative min-h-[calc(100vh-72px)]">
           <div className="absolute top-0 right-0 bottom-0 w-32 md:w-48 bg-gradient-to-l from-blue-900 via-blue-900/80 to-transparent z-10"></div>
           <div className="absolute top-0 right-0 bottom-0 w-64 md:w-96 bg-gradient-to-l from-blue-900/60 via-blue-900/20 to-transparent z-5 blur-sm"></div>
 
@@ -133,13 +105,6 @@ const Login: React.FC = () => {
 
               <h2 className="text-4xl font-bold mt-8">Iniciar Sesión</h2>
               <p className="text-blue-200 mt-3">Accede al sistema de gestión logística</p>
-              
-              <div className="mt-4 p-3 bg-blue-800/30 rounded-lg text-xs">
-                <p className="text-blue-200 font-semibold">Credenciales de prueba:</p>
-                <p className="text-blue-100 mt-1">Cliente: cliente@logitrans.com / cliente123</p>
-                <p className="text-blue-100">Admin: admin@logitrans.com / admin123</p>
-                <p className="text-blue-100">Operador: operador@logitrans.com / operador123</p>
-              </div>
             </div>
 
             {error && (
@@ -240,7 +205,8 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <div className="col-span-1 md:col-span-7 relative min-h-[400px] md:min-h-[calc(100vh-80px)]">
+        {/* Columna derecha - Imagen */}
+        <div className="col-span-1 md:col-span-7 relative min-h-[calc(100vh-72px)]">
           <div className="absolute top-0 left-0 bottom-0 w-32 md:w-48 bg-gradient-to-r from-blue-900/90 via-blue-900/70 to-transparent z-10"></div>
           <div className="absolute top-0 left-0 bottom-0 w-64 md:w-96 bg-gradient-to-r from-blue-900/60 via-blue-900/30 to-transparent z-5 blur-sm"></div>
 
@@ -316,10 +282,8 @@ const Login: React.FC = () => {
             </div>
           </div>
         </div>
-
-        <div className="absolute top-1/2 left-5/12 transform -translate-y-1/2 w-1 h-3/4 bg-gradient-to-b from-transparent via-blue-300/30 to-transparent z-30 hidden md:block"></div>
       </div>
-    </MainLayout>
+    </div>
   );
 };
 

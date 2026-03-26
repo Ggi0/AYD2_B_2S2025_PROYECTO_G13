@@ -6,5 +6,5 @@
 - Estiben Yair Lopez Leveron 202204578
 - Evelio Marcos Josué Cruz Soliz 202010040
 - Johan Moises Cardona Rosales 202201405
-- Jens Jeremy Pablo Sosof 202102771
 - Gonzalo Fernando Pérez Cazún 202211515
+- Jens Jeremy Pablo Sosof 202102771

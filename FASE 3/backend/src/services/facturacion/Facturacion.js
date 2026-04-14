@@ -43,56 +43,48 @@ function r2(valor) {
 /* ═══════════════════════════════════════════════════════
    1. GENERAR BORRADOR (CDU003.1)
    ═══════════════════════════════════════════════════════ */
+// Solo la función generarBorrador cambia. El resto del servicio queda igual.
 
-async function generarBorrador(orden_id, usuario_id) {
+async function generarBorrador(orden_id, usuario_id, io = null) {
   const datos = await FacturaFEL.obtenerDatosParaBorrador(orden_id);
 
   if (!datos) {
     throw Object.assign(
-      new Error(`Orden ${orden_id} no encontrada o le faltan datos (contrato, vehículo o tarifario).`),
+      new Error(`Orden ${orden_id} no encontrada o le faltan datos.`),
       { status: 404 }
     );
   }
 
-  // CORRECCIÓN: tu módulo de órdenes deja el estado en "CERRADA", no "ENTREGADA"
-  // Se aceptan ambos para ser compatibles con cualquier flujo.
   const estadosPermitidos = ["ENTREGADA", "CERRADA"];
   if (!estadosPermitidos.includes(datos.estado_orden)) {
     throw Object.assign(
       new Error(
-        `La orden ${orden_id} debe estar en estado ENTREGADA o CERRADA para generar factura. ` +
+        `La orden ${orden_id} debe estar en estado ENTREGADA o CERRADA. ` +
         `Estado actual: ${datos.estado_orden}`
       ),
       { status: 422 }
     );
   }
 
-  // Idempotente: si ya existe, retornar la existente
   const facturaExistente = await FacturaFEL.buscarPorOrden(orden_id);
   if (facturaExistente) {
     return { borrador: facturaExistente, calculoDetallado: null, yaExistia: true };
   }
 
-  // Distancia: puede no estar configurada en rutas_autorizadas
   if (!datos.distancia_km || datos.distancia_km <= 0) {
     throw Object.assign(
-      new Error(
-        "La ruta autorizada no tiene distancia_km configurada. " +
-        "Vaya al contrato → rutas autorizadas y asigne la distancia."
-      ),
+      new Error("La ruta autorizada no tiene distancia_km configurada."),
       { status: 422 }
     );
   }
 
-  // Tarifa: COALESCE en la query ya cae al tarifario base si no hay negociada
   if (!datos.tarifa_aplicada || datos.tarifa_aplicada <= 0) {
     throw Object.assign(
-      new Error("No se encontró tarifa para el tipo de unidad. Verifique el tarifario."),
+      new Error("No se encontró tarifa para el tipo de unidad."),
       { status: 422 }
     );
   }
 
-  // Cálculo de montos
   const bruto               = r2(datos.distancia_km * datos.tarifa_aplicada);
   const porcentajeDescuento = datos.porcentaje_descuento || 0;
   const descuento_aplicado  = r2(bruto * (porcentajeDescuento / 100));
@@ -127,6 +119,36 @@ async function generarBorrador(orden_id, usuario_id) {
     nit_cliente:                datos.cliente_nit,
     nombre_cliente_facturacion: datos.cliente_nombre,
   });
+
+  /* ─── Emisión WebSocket ───────────────────────── */
+  // io es opcional: si viene null (llamada interna), simplemente no emite
+  if (io) {
+    io.to("AGENTE_FINANCIERO").emit("nuevo_borrador", {
+      tipo: "NUEVO_BORRADOR",
+      borrador: {
+        id:                         borrador.id,
+        numero_factura:             borrador.numero_factura,
+        estado:                     borrador.estado,
+        // La tabla usa f.cliente_nombre ?? f.nombre_cliente_facturacion
+        // Enviamos ambos para cubrir los dos casos
+        cliente_nombre:             datos.cliente_nombre,
+        nombre_cliente_facturacion: borrador.nombre_cliente_facturacion,
+        nit_cliente:                borrador.nit_cliente,
+        subtotal:                   borrador.subtotal,       // ← faltaba
+        iva:                        borrador.iva,            // ← faltaba
+        total_factura:              borrador.total_factura,
+        fecha_emision:              borrador.fecha_emision,
+        orden_id:                   borrador.orden_id,
+      },
+      mensaje:   `Nuevo borrador — Orden #${orden_id} | ${datos.cliente_nombre} | Q${borrador.total_factura}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    console.log(`[WS] Evento nuevo_borrador emitido a sala AGENTE_FINANCIERO`);
+  } else {
+    console.warn("[WS] io es null — evento NO emitido (llamada interna sin HTTP)");
+  }
+  /* ─────────────────────────────────────────────── */
 
   return { borrador, calculoDetallado, yaExistia: false };
 }

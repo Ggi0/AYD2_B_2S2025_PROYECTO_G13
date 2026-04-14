@@ -76,18 +76,21 @@ function resolverUserId(user) {
  const generarBorrador = async (req, res) => {
   try {
     const orden_id  = parseInt(req.params.orden_id);
-    const usuarioId = resolverUserId(req.user);      // ← usa helper robusto
- 
+    const usuarioId = resolverUserId(req.user);
+
     if (isNaN(orden_id)) {
       return err(res, "orden_id debe ser un número entero", 400);
     }
- 
-    const resultado = await facturacionService.generarBorrador(orden_id, usuarioId);
- 
+
+    // Recuperar la instancia de Socket.IO desde app
+    const io = req.app.get("io");
+
+    const resultado = await facturacionService.generarBorrador(orden_id, usuarioId, io);
+
     const mensaje = resultado.yaExistia
       ? "Ya existía una factura para esta orden. Se retorna la existente."
       : "Borrador de factura generado exitosamente.";
- 
+
     return ok(res, resultado, mensaje, resultado.yaExistia ? 200 : 201);
   } catch (error) {
     return err(res, error.message, error.status || 500);

@@ -10,7 +10,11 @@ async function generarOrden(payload) {
   );
 
   // Validaciones de seguridad
-  if (!ctx.contrato) throw crearError("Contrato no vigente o bloqueado", 403);
+  if (!ctx.contrato)
+    throw crearError(
+      "No se encontró un contrato vigente que cubra esta ruta y peso",
+      403,
+    );
   if (ctx.facturasVencidas > 0)
     throw crearError("Tiene facturas vencidas", 403);
   if (!ctx.ruta) throw crearError("Ruta no autorizada por contrato", 403);
@@ -30,6 +34,12 @@ async function generarOrden(payload) {
   if (ctx.contrato.saldo_usado + costoFinal > ctx.contrato.limite_credito) {
     throw crearError("Crédito insuficiente para cubrir esta orden", 403);
   }
+
+  if (!ctx.contrato)
+    throw crearError(
+      "No se encontró un contrato vigente que cubra esta ruta y peso",
+      403,
+    );
 
   // 4. Inserción en la base de datos
   const nuevaOrden = await ordenStore.insertarOrden({

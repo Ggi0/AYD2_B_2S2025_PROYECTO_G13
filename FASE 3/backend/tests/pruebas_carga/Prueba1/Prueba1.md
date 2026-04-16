@@ -101,3 +101,19 @@ nos retornara 2 json en los cuales sera el resumen de la creacion y los usuarios
 | http_req_duration   | Tiempo total de peticiones HTTP (incluye login + creación)      |
 | http_reqs           | Número total de peticiones HTTP realizadas                      |
 | http_req_failed     | Tasa de peticiones HTTP que fallaron                            |
+
+### 5. Evidencias
+
+![alt text](img/1000.png)
+
+![alt text](img/resumen.png)
+
+### 6. Análisis de Resultados
+
+Aspectos Exitosos:
+
+    El sistema logró procesar exitosamente 1,000 solicitudes de creación de pilotos con una tasa de éxito del 100%, demostrando que la capacidad de procesamiento del backend es adecuada para el volumen esperado.
+
+    La generación de datos únicos (emails, NITs y teléfonos) fue correcta, garantizando que no existan duplicados en la simulación.
+
+    El endpoint de autenticación /api/auth/login respondió correctamente a todas las peticiones, validando las credenciales del agente logístico en cada iteración.

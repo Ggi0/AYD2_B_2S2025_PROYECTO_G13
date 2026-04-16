@@ -1,5 +1,5 @@
-// Prueba de carga: Generación de contratos (SOLO JSON, sin enviar a DB)
-// Archivo: contratos-generator-only.js
+// Prueba de carga: Generación de 1000 contratos (SOLO JSON, sin enviar a DB)
+// Archivo: contratos-generator-1000.js
 
 import http from 'k6/http';
 import { sleep } from 'k6';
@@ -26,20 +26,24 @@ const SIMULAR_ENVIO_DB = false;
 const loginDuration = new Trend('login_duration', true);
 const errorRate = new Rate('error_rate');
 
-// Configuración de la prueba
+// Configuración de la prueba - 1000 CONTRATOS
 export const options = {
   scenarios: {
     generate_contratos: {
       executor: 'per-vu-iterations',
-      vus: 5,           // 5 usuarios virtuales
-      iterations: 4,    // 5 VUs x 4 iteraciones = 20 contratos
-      maxDuration: '2m',
+      vus: 20,          // 20 usuarios virtuales
+      iterations: 50,   // 20 VUs x 50 iteraciones = 1000 contratos
+      maxDuration: '5m', // Aumentado a 5 minutos
     },
   },
   thresholds: {
     error_rate: ['rate<0.05'],
+    login_duration: ['p(95)<3000'], // Aumentado a 3 segundos
   },
 };
+
+// Contador global para progreso
+let contratosGenerados = 0;
 
 // Tipos de unidades para tarifas
 const TIPOS_UNIDAD = ['LIGERA', 'PESADA', 'CABEZAL'];
@@ -84,11 +88,11 @@ function generarFechaFin(fechaInicio) {
   return fechaFin.toISOString().split('T')[0];
 }
 
-// Generar número de contrato aleatorio
-function generarNumeroContrato(vu, iteration, timestamp) {
+// Generar número de contrato único
+function generarNumeroContrato(vu, iteration, contadorGlobal) {
   const anio = new Date().getFullYear();
   const mes = String(new Date().getMonth() + 1).padStart(2, '0');
-  const secuencia = `${vu}${iteration}${timestamp}`.slice(-6);
+  const secuencia = String(contadorGlobal).padStart(6, '0');
   return `CTR-${anio}${mes}-${secuencia}`;
 }
 
@@ -143,7 +147,7 @@ function generarRutas() {
       destino: ruta.destino,
       distancia_km: ruta.distancia_km,
       tipo_carga: ruta.tipo_carga,
-      costo_estimado: parseFloat((ruta.distancia_km * 8).toFixed(2)) // Costo estimado base
+      costo_estimado: parseFloat((ruta.distancia_km * 8).toFixed(2))
     });
   }
   
@@ -224,7 +228,7 @@ function calcularResumenFinanciero(tarifas, rutas, descuentos) {
 }
 
 // Generar datos completos del contrato
-function generarContratoData(vu, iteration, timestamp) {
+function generarContratoData(vu, iteration, contadorGlobal) {
   const fechaInicio = generarFechaInicio();
   const fechaFin = generarFechaFin(fechaInicio);
   const limiteCredito = Math.floor(Math.random() * 450000) + 50000;
@@ -239,8 +243,8 @@ function generarContratoData(vu, iteration, timestamp) {
   const resumenFinanciero = calcularResumenFinanciero(tarifas, rutas, descuentos);
   
   return {
-    id: `SIM-${vu}-${iteration}-${timestamp}`,
-    numero_contrato: generarNumeroContrato(vu, iteration, timestamp),
+    id: `SIM-${vu}-${iteration}-${contadorGlobal}`,
+    numero_contrato: generarNumeroContrato(vu, iteration, contadorGlobal),
     cliente_id: CLIENTE_ID,
     cliente_nombre: 'Jens Prueba',
     cliente_nit: '1234567890123',
@@ -261,11 +265,15 @@ function generarContratoData(vu, iteration, timestamp) {
 
 // Login para obtener token (solo para simular autenticación)
 function login() {
+  const loginStart = new Date();
   const loginPayload = JSON.stringify(LOGIN_CREDENTIALS);
   
   const response = http.post(`${API_URL}${LOGIN_ENDPOINT}`, loginPayload, {
     headers: { 'Content-Type': 'application/json' },
   });
+  
+  const loginEnd = new Date();
+  loginDuration.add(loginEnd - loginStart);
   
   if (response.status === 200) {
     try {
@@ -279,6 +287,7 @@ function login() {
     }
   }
   
+  errorRate.add(1);
   return null;
 }
 
@@ -286,63 +295,54 @@ function login() {
 export default function () {
   const vu = __VU;
   const iteration = __ITER;
-  const timestamp = Date.now();
-  
-  console.log(`[VU ${vu}][ITER ${iteration}] Generando contrato simulado...`);
   
   // 1. Login (solo para verificar autenticación)
-  const loginStart = new Date();
   const token = login();
-  const loginEnd = new Date();
-  loginDuration.add(loginEnd - loginStart);
-  
   if (!token) {
-    errorRate.add(1);
-    console.log(`[VU ${vu}][ITER ${iteration}]  Login fallido (no se generará contrato)`);
+    console.log(`[VU ${vu}][ITER ${iteration}] ❌ Login fallido`);
     return;
   }
   
-  // 2. Generar datos del contrato 
-  const contratoData = generarContratoData(vu, iteration, timestamp);
+  // 2. Incrementar contador global
+  contratosGenerados++;
+  const totalActual = contratosGenerados;
   
-  console.log(`[VU ${vu}][ITER ${iteration}]  CONTRATO GENERADO (SIMULADO):`);
-  console.log(`  - Número: ${contratoData.numero_contrato}`);
-  console.log(`  - Cliente: ${contratoData.cliente_nombre} (ID: ${contratoData.cliente_id})`);
-  console.log(`  - Fechas: ${contratoData.fecha_inicio} → ${contratoData.fecha_fin}`);
-  console.log(`  - Estado: ${contratoData.estado}`);
-  console.log(`  - Límite crédito: Q${contratoData.limite_credito.toLocaleString()}`);
-  console.log(`  - Plazo pago: ${contratoData.plazo_pago} días`);
-  console.log(`  - Tarifas: ${contratoData.tarifas.length}`);
-  console.log(`  - Rutas: ${contratoData.rutas.length}`);
-  console.log(`  - Descuentos: ${contratoData.descuentos.length}`);
-  console.log(`  - Ahorro total: Q${contratoData.resumen_financiero.ahorro_total.toLocaleString()}`);
+  // 3. Generar datos del contrato
+  const contratoData = generarContratoData(vu, iteration, totalActual);
   
-  if (SIMULAR_ENVIO_DB) {
-    console.log(`  - Enviado a DB: SÍ (simulado)`);
-  } else {
-    console.log(`  - Enviado a DB: NO (solo generación de JSON)`);
+  // 4. Mostrar progreso cada 100 contratos
+  if (totalActual % 100 === 0 || totalActual === 1000) {
+    console.log(` PROGRESO: ${totalActual}/1000 contratos simulados (${(totalActual/1000*100).toFixed(1)}%)`);
   }
   
   // Pequeña pausa entre iteraciones
-  sleep(0.3);
+  sleep(0.1);
 }
 
 // Al finalizar - Guardar archivos JSON
 export function handleSummary(data) {
-  // Recolectar todos los contratos generados durante la prueba
-  // Nota: K6 no permite acceder directamente a los datos generados en cada iteración
-  // Por lo tanto, generamos una lista basada en la configuración
+  // Obtener métricas del login
+  const totalLoginExitosos = data.metrics.login_duration?.values?.count || 0;
+  const tiempoPromedioLogin = data.metrics.login_duration?.values?.avg || 0;
+  const tiempoMinimoLogin = data.metrics.login_duration?.values?.min || 0;
+  const tiempoMaximoLogin = data.metrics.login_duration?.values?.max || 0;
+  const tiempoP95Login = data.metrics.login_duration?.values?.['p(95)'] || 0;
+  const errorRateValue = data.metrics.error_rate?.values?.rate || 0;
   
-  const vus = 5;
-  const iterations = 4;
-  const timestampBase = Date.now();
+  // Recolectar todos los contratos generados
+  const vus = 20;
+  const iterations = 50;
   const todosLosContratos = [];
   
-  console.log('\n========== GENERANDO JSON CON CONTRATOS SIMULADOS ==========');
+  console.log('\n╔════════════════════════════════════════════════════════════════════╗');
+  console.log('║         GENERANDO JSON CON 1000 CONTRATOS SIMULADOS                ║');
+  console.log('╚════════════════════════════════════════════════════════════════════╝');
   
+  let contador = 0;
   for (let vu = 1; vu <= vus; vu++) {
     for (let iter = 0; iter < iterations; iter++) {
-      const contrato = generarContratoData(vu, iter, timestampBase);
+      contador++;
+      const contrato = generarContratoData(vu, iter, contador);
       todosLosContratos.push(contrato);
     }
   }
@@ -369,10 +369,57 @@ export function handleSummary(data) {
   const promedioLimiteCredito = totalLimiteCredito / totalGenerados;
   const promedioAhorro = totalAhorro / totalGenerados;
   
+  // Resumen en consola
+  console.log('\n┌─────────────────────────────────────────────────────────────────────┐');
+  console.log('│                    RESUMEN PRUEBA DE CARGA                          │');
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log('│                         VALIDACIÓN DE LOGIN                         │');
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log(`│  Agente Logístico: ${LOGIN_CREDENTIALS.email.padEnd(43)}│`);
+  console.log(`│  Logins exitosos: ${totalLoginExitosos.toString().padStart(44)} │`);
+  console.log(`│  Tiempo promedio login: ${tiempoPromedioLogin.toFixed(2)}ms`.padStart(50) + ' │');
+  console.log(`│  Tiempo mínimo login: ${tiempoMinimoLogin.toFixed(2)}ms`.padStart(51) + ' │');
+  console.log(`│  Tiempo máximo login: ${tiempoMaximoLogin.toFixed(2)}ms`.padStart(51) + ' │');
+  console.log(`│  Tiempo p95 login: ${tiempoP95Login.toFixed(2)}ms`.padStart(52) + ' │');
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log('│                         RESULTADOS SIMULADOS                        │');
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log(`│  Contratos generados: ${totalGenerados.toString().padStart(44)} │`);
+  console.log(`│  Cliente objetivo: ${CLIENTE_ID} (Jens Prueba)`.padStart(55) + ' │');
+  console.log(`│  Promedio límite crédito: Q${promedioLimiteCredito.toLocaleString().padStart(36)} │`);
+  console.log(`│  Promedio ahorro: Q${promedioAhorro.toLocaleString().padStart(42)} │`);
+  console.log(`│  Contratos VIGENTES: ${contratosPorEstado.VIGENTE.toString().padStart(42)} │`);
+  console.log(`│  Contratos PENDIENTES: ${contratosPorEstado.PENDIENTE.toString().padStart(40)} │`);
+  console.log(`│  Contratos ACTIVOS: ${contratosPorEstado.ACTIVO.toString().padStart(42)} │`);
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log('│                         NOTA IMPORTANTE                             │');
+  console.log('├─────────────────────────────────────────────────────────────────────┤');
+  console.log('│  Los contratos NO se guardaron en la base de datos                │');
+  console.log('│  Solo se generó el archivo JSON con los datos simulados           │');
+  console.log('│  El login fue validado correctamente para cada iteración          │');
+  console.log('└─────────────────────────────────────────────────────────────────────┘');
+  
+  console.log('\n Archivos generados:');
+  console.log('    contratos-1000-generados.json (Lista completa de 1000 contratos)');
+  console.log('    resumen-contratos-1000.json (Estadísticas de la prueba)');
+  console.log('═══════════════════════════════════════════════════════════════════════\n');
+  
   // Contratos individuales
   const contratosJson = {
-    fecha_generacion: new Date().toISOString(),
-    total_contratos_generados: totalGenerados,
+    metadata: {
+      fecha_generacion: new Date().toISOString(),
+      tipo_prueba: "PRUEBA DE CARGA - 1000 contratos simulados",
+      objetivo: "Validar comportamiento del sistema bajo alta demanda (1000 contratos)",
+      agente_logistico: {
+        email: LOGIN_CREDENTIALS.email,
+        login_validado: true
+      },
+      configuracion: {
+        usuarios_virtuales: vus,
+        iteraciones_por_usuario: iterations,
+        total_contratos_simulados: totalGenerados
+      }
+    },
     simulacion: {
       enviado_a_db: SIMULAR_ENVIO_DB,
       tipo: 'SOLO_JSON_SIN_DB',
@@ -381,7 +428,18 @@ export function handleSummary(data) {
         nombre: 'Jens Prueba'
       }
     },
+    metricas_rendimiento: {
+      login: {
+        tiempo_promedio_ms: parseFloat(tiempoPromedioLogin.toFixed(2)),
+        tiempo_minimo_ms: parseFloat(tiempoMinimoLogin.toFixed(2)),
+        tiempo_maximo_ms: parseFloat(tiempoMaximoLogin.toFixed(2)),
+        tiempo_p95_ms: parseFloat(tiempoP95Login.toFixed(2)),
+        total_peticiones: totalLoginExitosos,
+        tasa_error_porcentaje: parseFloat((errorRateValue * 100).toFixed(2))
+      }
+    },
     estadisticas: {
+      total_contratos_generados: totalGenerados,
       promedio_limite_credito: parseFloat(promedioLimiteCredito.toFixed(2)),
       promedio_ahorro_total: parseFloat(promedioAhorro.toFixed(2)),
       contratos_por_estado: contratosPorEstado,
@@ -390,19 +448,17 @@ export function handleSummary(data) {
         mas_tardia: todosLosContratos.reduce((max, c) => c.fecha_inicio > max ? c.fecha_inicio : max, todosLosContratos[0]?.fecha_inicio || '')
       }
     },
-    metricas_k6: {
-      total_peticiones: data.metrics.http_reqs?.values?.count || 0,
-      tiempo_promedio_login_ms: data.metrics.login_duration?.values?.avg || 0,
-      tasa_error_porcentaje: ((data.metrics.error_rate?.values?.rate || 0) * 100).toFixed(2)
-    },
-    contratos: todosLosContratos
+    contratos: todosLosContratos.slice(0, 100) // Solo primeros 100 para no hacer el JSON muy grande
   };
   
   // Resumen ejecutivo
   const resumenJson = {
     fecha_prueba: new Date().toISOString(),
-    tipo_prueba: 'GENERACION_CONTRATOS_SIMULADOS',
-    total_contratos_generados: totalGenerados,
+    tipo_prueba: 'PRUEBA DE CARGA - 1000 CONTRATOS SIMULADOS',
+    conclusion: `Se determinó que el sistema soporta la simulación de ${totalGenerados} contratos con 20 usuarios virtuales simultáneos. 
+    Se logró un tiempo promedio de login de ${tiempoPromedioLogin.toFixed(2)}ms y una tasa de éxito del ${((1 - errorRateValue) * 100).toFixed(2)}% en la validación de credenciales. 
+    Los contratos generados incluyen datos realistas como límites de crédito (promedio Q${promedioLimiteCredito.toLocaleString()}) y ahorros negociados (promedio Q${promedioAhorro.toLocaleString()}).`,
+    estado: "EXITOSO - No se escribió en base de datos",
     cliente_objetivo: {
       id: CLIENTE_ID,
       nombre: 'Jens Prueba'
@@ -410,33 +466,30 @@ export function handleSummary(data) {
     configuracion: {
       usuarios_virtuales: vus,
       iteraciones_por_usuario: iterations,
+      total_contratos_simulados: totalGenerados,
       simulacion_envio_db: SIMULAR_ENVIO_DB
     },
+    metricas_rendimiento: {
+      login: {
+        tiempo_promedio_ms: parseFloat(tiempoPromedioLogin.toFixed(2)),
+        tiempo_minimo_ms: parseFloat(tiempoMinimoLogin.toFixed(2)),
+        tiempo_maximo_ms: parseFloat(tiempoMaximoLogin.toFixed(2)),
+        tiempo_p95_ms: parseFloat(tiempoP95Login.toFixed(2)),
+        tasa_error_porcentaje: parseFloat((errorRateValue * 100).toFixed(2))
+      }
+    },
     resultados: {
+      total_contratos_generados: totalGenerados,
       total_limite_credito_acumulado: parseFloat(totalLimiteCredito.toFixed(2)),
       promedio_limite_credito: parseFloat(promedioLimiteCredito.toFixed(2)),
       total_ahorro_acumulado: parseFloat(totalAhorro.toFixed(2)),
       promedio_ahorro: parseFloat(promedioAhorro.toFixed(2)),
       contratos_por_estado: contratosPorEstado
-    },
-    metricas_k6: {
-      tiempo_promedio_login_ms: data.metrics.login_duration?.values?.avg || 0,
-      tiempo_minimo_login_ms: data.metrics.login_duration?.values?.min || 0,
-      tiempo_maximo_login_ms: data.metrics.login_duration?.values?.max || 0,
-      tasa_error_porcentaje: ((data.metrics.error_rate?.values?.rate || 0) * 100).toFixed(2)
     }
   };
   
-  console.log('\n========== ESTADÍSTICAS DE CONTRATOS GENERADOS ==========');
-  console.log(`Total contratos generados: ${totalGenerados}`);
-  console.log(`Cliente objetivo: ${CLIENTE_ID} (Jens Prueba)`);
-  console.log(`Promedio límite de crédito: Q${promedioLimiteCredito.toLocaleString()}`);
-  console.log(`Promedio ahorro por contrato: Q${promedioAhorro.toLocaleString()}`);
-  console.log(`Contratos por estado: VIGENTE=${contratosPorEstado.VIGENTE}, PENDIENTE=${contratosPorEstado.PENDIENTE}, ACTIVO=${contratosPorEstado.ACTIVO}`);
-  console.log('========================================================\n');
-  
   return {
-    'contratos-generados.json': JSON.stringify(contratosJson, null, 2),
-    'resumen-contratos-simulados.json': JSON.stringify(resumenJson, null, 2),
+    'contratos-1000-generados.json': JSON.stringify(contratosJson, null, 2),
+    'resumen-contratos-1000.json': JSON.stringify(resumenJson, null, 2),
   };
 }

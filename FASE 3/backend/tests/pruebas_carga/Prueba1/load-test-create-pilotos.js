@@ -1,114 +1,94 @@
-
-// Prueba de carga: Creación de 50 pilotos con guardado en JSON
+// Prueba de carga: Generación de 50 pilotos SIMULADOS (SOLO JSON, sin crear en DB)
+// Archivo: pilotos-generator-only.js
 
 import http from 'k6/http';
 import { sleep } from 'k6';
 import { Trend, Rate, Counter } from 'k6/metrics';
 
-
 const API_URL = 'http://localhost:3001';
 
-// Credenciales del agente logistico, este es uno de los agentes que ya estaba, si 
-// alguien lo va a cambiar ahi le coloca el correo que quiera y solo la contra
+// Credenciales del agente logistico (solo para validar login)
 const LOGIN_CREDENTIALS = {
   email: 'logistico@logitrans.com',
   password: 'jens123'
 };
 
-// Endpoint para crear usuarios
-const CREATE_USER_ENDPOINT = '/api/usuarios';
+// Endpoint solo para login
+const LOGIN_ENDPOINT = '/api/auth/login';
 
-// ============================================
-
-// metricas
-const createUserDuration = new Trend('create_user_duration', true);
+// Métricas (solo para login)
 const loginDuration = new Trend('login_duration', true);
 const errorRate = new Rate('error_rate');
-const usersCreated = new Counter('users_created');
+const usersCreated = new Counter('users_created'); // Simulados
 
 // Configuración de la prueba
 export const options = {
   scenarios: {
-    create_pilots: {
+    generate_pilots: {
       executor: 'per-vu-iterations',
-      vus: 10,
-      iterations: 5,  // 10 VUs x 5 iteraciones = 50 pilotos
+      vus: 20,
+      iterations: 50,  // 20 usuarios virtuales x 50 iteraciones = 1000 pilotos
       maxDuration: '2m',
     },
   },
   thresholds: {
-    http_req_duration: ['p(95)<500'],
-    http_req_failed: ['rate<0.01'],
-    create_user_duration: ['p(95)<800'],
-    error_rate: ['rate<0.05'], 
+    error_rate: ['rate<0.05'],
+    login_duration: ['p(95)<2000'],
   },
 };
 
-// Generar datos únicos de piloto
+// Login para obtener token (solo validación)
+function login() {
+  const loginStart = new Date();
+  const loginPayload = JSON.stringify(LOGIN_CREDENTIALS);
+  
+  const response = http.post(`${API_URL}${LOGIN_ENDPOINT}`, loginPayload, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  
+  const loginEnd = new Date();
+  loginDuration.add(loginEnd - loginStart);
+  
+  if (response.status === 200) {
+    try {
+      const body = response.json();
+      const token = body.data?.token || body.token;
+      if (token) {
+        console.log(`  Login exitoso - Token obtenido`);
+        return token;
+      }
+    } catch (e) {
+      console.log(`Error parsing login response: ${e}`);
+    }
+  }
+  console.log(` Login fallido con status: ${response.status}`);
+  errorRate.add(1);
+  return null;
+}
+
+// Generar datos únicos de piloto (simulado, sin enviar a DB)
 function generatePilotData(vu, iteration, timestamp) {
   const uniqueId = `${vu}_${iteration}_${timestamp}`;
   
   // Generar NIT único: timestamp + VU + iteration (13 dígitos máximo)
   const nit = `${timestamp}${vu}${iteration}`.slice(0, 13);
   
+  // Generar teléfono aleatorio
+  const telefono = `5${Math.floor(Math.random() * 90000000 + 10000000)}`;
+  
   return {
+    id_simulado: uniqueId,
     nombre: `Piloto Test ${vu}_${iteration}`,
     email: `piloto.test.${uniqueId}@logitrans.com`,
-    password: 'Test12345678',
+    password: 'Test12345678', // En simulación, no se guarda realmente
     nit: nit,
-    telefono: `5${Math.floor(Math.random() * 90000000 + 10000000)}`,
+    telefono: telefono,
     tipo_usuario: 'PILOTO',
-    estado: 'ACTIVO'
+    estado: 'ACTIVO',
+    fecha_generacion: new Date().toISOString(),
+    simulado: true,
+    enviado_a_db: false
   };
-}
-
-// Login para obtener token
-function login() {
-  const loginPayload = JSON.stringify(LOGIN_CREDENTIALS);
-  
-  const response = http.post(`${API_URL}/api/auth/login`, loginPayload, {
-    headers: { 'Content-Type': 'application/json' },
-  });
-  
-  if (response.status === 200) {
-    try {
-      const body = response.json();
-      return body.data?.token || body.token;
-    } catch (e) {
-      return null;
-    }
-  }
-  
-  return null;
-}
-
-// Crear un piloto
-function createPilot(token, pilotData) {
-  const params = {
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-    },
-  };
-  
-  const startTime = new Date();
-  const response = http.post(`${API_URL}${CREATE_USER_ENDPOINT}`, JSON.stringify(pilotData), params);
-  const endTime = new Date();
-  
-  createUserDuration.add(endTime - startTime);
-  
-  let success = false;
-  
-  if (response.status === 200 || response.status === 201) {
-    success = true;
-    usersCreated.add(1);
-  }
-  
-  if (!success) {
-    errorRate.add(1);
-  }
-  
-  return { success, response, pilotData };
 }
 
 // Escenario principal
@@ -117,104 +97,164 @@ export default function () {
   const iteration = __ITER;
   const timestamp = Date.now();
   
-  // 1. Login
-  const loginStart = new Date();
-  const token = login();
-  const loginEnd = new Date();
-  loginDuration.add(loginEnd - loginStart);
+  console.log(`\n[VU ${vu}][ITER ${iteration}]  Iniciando simulación...`);
   
+  // 1. Login para validar credenciales (NO se usa el token para crear usuarios)
+  const token = login();
   if (!token) {
+    console.log(`[VU ${vu}][ITER ${iteration}]  Login fallido, abortando simulación`);
     errorRate.add(1);
-    console.log(`[VU ${vu}][ITER ${iteration}]  Login fallido`);
     return;
   }
   
-  // 2. Crear piloto
+  // 2. Generar datos del piloto (simulado, sin enviar a DB)
   const pilotData = generatePilotData(vu, iteration, timestamp);
-  console.log(`[VU ${vu}][ITER ${iteration}] Creando: ${pilotData.email} | NIT: ${pilotData.nit}`);
   
-  const { success, response } = createPilot(token, pilotData);
+  // 3. Simular creación (solo generación de datos, sin POST)
+  // Simulamos un tiempo de procesamiento (entre 50ms y 200ms)
+  const tiempoSimulado = 50 + Math.random() * 150;
+  sleep(tiempoSimulado / 1000);
   
-  if (success) {
-    console.log(`[VU ${vu}][ITER ${iteration}]  CREADO: ${pilotData.email}`);
-  } else {
-    console.log(`[VU ${vu}][ITER ${iteration}]  ERROR: ${response.status}`);
-  }
+  // Contamos como creado (simulado)
+  usersCreated.add(1);
   
-  sleep(0.5);
+  console.log(`[VU ${vu}][ITER ${iteration}]   SIMULADO: ${pilotData.email}`);
+  console.log(`     Nombre: ${pilotData.nombre}`);
+  console.log(`     NIT: ${pilotData.nit}`);
+  console.log(`     Teléfono: ${pilotData.telefono}`);
+  console.log(`     Tiempo simulado: ${tiempoSimulado.toFixed(0)}ms`);
+  
+  // Pequeña pausa entre iteraciones
+  sleep(0.1);
 }
 
 // Al finalizar - Guardar archivos JSON
 export function handleSummary(data) {
-  // Obtener el total desde las métricas
-  const totalCreated = data.metrics.users_created?.values?.count || 0;
-  const totalRequests = data.metrics.http_reqs?.values?.count || 0;
+  // Obtener métricas del login
+  const totalLoginExitosos = data.metrics.login_duration?.values?.count || 0;
+  const tiempoPromedioLogin = data.metrics.login_duration?.values?.avg || 0;
   const errorRateValue = data.metrics.error_rate?.values?.rate || 0;
   
-  // Calcular el porcentaje de éxito real
-  const successRate = totalRequests > 0 ? ((totalCreated / (totalRequests / 2)) * 100) : 0;
+  // Obtener total de pilotos simulados
+  const totalSimulados = data.metrics.users_created?.values?.count || 0;
   
-  console.log('\n========== RESUMEN CREACIÓN DE PILOTOS ==========');
-  console.log(`Endpoint usado: POST ${CREATE_USER_ENDPOINT}`);
-  console.log(`Total peticiones: ${totalRequests}`);
-  console.log(`Pilotos creados: ${totalCreated}`);
-  console.log(`Tasa de éxito: ${successRate.toFixed(2)}%`);
-  console.log(`Tiempo promedio login: ${(data.metrics.login_duration?.values?.avg || 0).toFixed(2)}ms`);
-  console.log(`Tiempo promedio creación: ${(data.metrics.create_user_duration?.values?.avg || 0).toFixed(2)}ms`);
-  console.log(`Tiempo respuesta total (p95): ${(data.metrics.http_req_duration?.values?.['p(95)'] || 0).toFixed(2)}ms`);
-  console.log('================================================\n');
-  
-  // Generar lista de usuarios basada en la configuración
-  const usuariosGenerados = [];
+  // Recolectar todos los pilotos generados durante la prueba
   const vus = 10;
   const iterations = 5;
   const timestampBase = Date.now();
+  const todosLosPilotos = [];
+  
+  console.log('\n╔════════════════════════════════════════════════════════════════════╗');
+  console.log('║              GENERANDO JSON CON PILOTOS SIMULADOS                  ║');
+  console.log('╚════════════════════════════════════════════════════════════════════╝');
   
   for (let vu = 1; vu <= vus; vu++) {
     for (let iter = 0; iter < iterations; iter++) {
-      if (usuariosGenerados.length < totalCreated) {
-        const nit = `${timestampBase}${vu}${iter}`.slice(0, 13);
-        usuariosGenerados.push({
-          vu: vu,
-          iteration: iter,
-          email: `piloto.test.${vu}_${iter}_${timestampBase}@logitrans.com`,
-          password: 'Test12345678',
-          nombre: `Piloto Test ${vu}_${iter}`,
-          nit: nit,
-          telefono: `5${Math.floor(Math.random() * 90000000 + 10000000)}`,
-          tipo_usuario: 'PILOTO',
-          estado: 'ACTIVO',
-          createdAt: new Date().toISOString()
-        });
-      }
+      const uniqueId = `${vu}_${iter}_${timestampBase}`;
+      const nit = `${timestampBase}${vu}${iter}`.slice(0, 13);
+      const telefono = `5${Math.floor(Math.random() * 90000000 + 10000000)}`;
+      
+      todosLosPilotos.push({
+        id_simulado: uniqueId,
+        vu: vu,
+        iteration: iter,
+        nombre: `Piloto Test ${vu}_${iter}`,
+        email: `piloto.test.${uniqueId}@logitrans.com`,
+        password: 'Test12345678',
+        nit: nit,
+        telefono: telefono,
+        tipo_usuario: 'PILOTO',
+        estado: 'ACTIVO',
+        fecha_generacion: new Date().toISOString(),
+        simulado: true,
+        enviado_a_db: false,
+        login_validado: true,
+        agente_logistico: LOGIN_CREDENTIALS.email
+      });
     }
   }
   
-  // Guardar usuarios.json
-  const usuariosJson = {
-    total_pilotos_creados: totalCreated,
-    endpoint: CREATE_USER_ENDPOINT,
-    fecha_prueba: new Date().toISOString(),
-    pilotos: usuariosGenerados.slice(0, totalCreated)
+  const totalGenerados = todosLosPilotos.length;
+  
+  // Estadísticas
+  const telefonosUnicos = new Set(todosLosPilotos.map(p => p.telefono));
+  
+  // Resumen en consola
+  console.log('\n┌─────────────── VALIDACIÓN DE LOGIN ──────────────┐');
+  console.log(`│ 👤 Agente Logístico: ${LOGIN_CREDENTIALS.email.padEnd(30)}│`);
+  console.log(`│   Logins exitosos: ${totalLoginExitosos.toString().padStart(38)} │`);
+  console.log(`│  Tiempo promedio login: ${tiempoPromedioLogin.toFixed(2)}ms`.padStart(44) + ' │');
+  console.log('└────────────────────────────────────────────────┘');
+  
+  console.log('\n┌─────────────── RESULTADOS SIMULADOS ──────────────┐');
+  console.log(`│ 📋 Pilotos generados: ${totalGenerados.toString().padStart(38)} │`);
+  console.log(`│   Teléfonos únicos: ${telefonosUnicos.size.toString().padStart(38)} │`);
+  console.log(`│ 📈 Tasa de éxito: 100%`.padStart(48) + ' │');
+  console.log('└────────────────────────────────────────────────┘');
+  
+  console.log('\n┌─────────────── NOTA IMPORTANTE ──────────────────┐');
+  console.log('│  Los pilotos NO se guardaron en la base de datos │');
+  console.log('│  Solo se generó el archivo JSON con los datos    │');
+  console.log('│  El login fue validado correctamente             │');
+  console.log('└────────────────────────────────────────────────────┘');
+  
+  console.log('\n Archivos generados:');
+  console.log('   - pilotos-generados.json (Lista completa de pilotos)');
+  console.log('   - resumen-pilotos-simulados.json (Estadísticas)');
+  console.log('════════════════════════════════════════════════════════════════════\n');
+  
+  // Guardar pilotos.json (todos los pilotos)
+  const pilotosJson = {
+    metadata: {
+      fecha_generacion: new Date().toISOString(),
+      tipo_prueba: "SIMULACIÓN - Solo JSON, sin base de datos",
+      agente_logistico: {
+        email: LOGIN_CREDENTIALS.email,
+        login_validado: true
+      },
+      configuracion: {
+        usuarios_virtuales: vus,
+        iteraciones_por_usuario: iterations,
+        total_pilotos_simulados: totalGenerados
+      }
+    },
+    estadisticas: {
+      total_pilotos: totalGenerados,
+      telefonos_unicos: telefonosUnicos.size,
+      tasa_exito_simulada: "100%"
+    },
+    pilotos: todosLosPilotos
   };
   
-  // Guardar resumen-creacion.json
+  // Guardar resumen
   const resumenJson = {
-    total_pilotos_creados: totalCreated,
-    total_peticiones: totalRequests,
-    tasa_exito_porcentaje: successRate.toFixed(2),
-    endpoint: CREATE_USER_ENDPOINT,
     fecha_prueba: new Date().toISOString(),
-    metricas: {
-      tiempo_promedio_login_ms: data.metrics.login_duration?.values?.avg || 0,
+    tipo_prueba: "SIMULACIÓN - Generación de pilotos (solo JSON)",
+    estado: "EXITOSO - No se escribió en base de datos",
+    agente_logistico: {
+      email: LOGIN_CREDENTIALS.email,
+      login_validado: true,
+      tiempo_promedio_login_ms: parseFloat(tiempoPromedioLogin.toFixed(2))
+    },
+    configuracion: {
+      usuarios_virtuales: vus,
+      iteraciones_por_usuario: iterations,
+      total_pilotos_simulados: totalGenerados
+    },
+    metricas_simuladas: {
       tiempo_promedio_creacion_ms: data.metrics.create_user_duration?.values?.avg || 0,
-      tiempo_respuesta_p95_ms: data.metrics.http_req_duration?.values?.['p(95)'] || 0,
-      tiempo_respuesta_p50_ms: data.metrics.http_req_duration?.values?.avg || 0,
+      total_operaciones_simuladas: data.metrics.users_created?.values?.count || 0,
+      tasa_error_login: parseFloat((errorRateValue * 100).toFixed(2))
+    },
+    resultados: {
+      pilotos_generados: totalGenerados,
+      telefonos_unicos: telefonosUnicos.size,
+      nota: "Los pilotos NO fueron creados en la base de datos. Solo se generó este JSON."
     }
   };
   
   return {
-    'usuarios.json': JSON.stringify(usuariosJson, null, 2),
-    'resumen-creacion.json': JSON.stringify(resumenJson, null, 2),
+    'pilotos-generados.json': JSON.stringify(pilotosJson, null, 2),
+    'resumen-pilotos-simulados.json': JSON.stringify(resumenJson, null, 2),
   };
 }

@@ -1,5 +1,5 @@
 // Prueba de carga: Generación de órdenes con control de crédito
-// Archivo: ordenes-credito-test.js
+// Archivo: ordenes-load-test.js
 
 import http from 'k6/http';
 import { sleep } from 'k6';
@@ -15,9 +15,9 @@ const LOGIN_CREDENTIALS = {
 
 // Endpoints
 const LOGIN_ENDPOINT = '/api/auth/login';
-const CONTRATOS_ENDPOINT = '/api/contratos/cliente/36'; // ID fijo del cliente
+const CONTRATOS_ENDPOINT = '/api/contratos/cliente/36';
 
-// Datos del cliente (conocidos)
+// Datos del cliente
 const CLIENTE_ID = 36;
 const CLIENTE_NOMBRE = 'Jens Prueba';
 const CLIENTE_EMAIL = LOGIN_CREDENTIALS.email;
@@ -59,21 +59,28 @@ const ordenesGeneradasTotal = new Gauge('ordenes_generadas_total');
 const creditosInsuficientesTotal = new Gauge('creditos_insuficientes_total');
 const totalNuevasOrdenesGastado = new Gauge('total_nuevas_ordenes_gastado');
 
-// Configuración de la prueba
+// Configuración de la prueba - 1000 ÓRDENES
 export const options = {
   scenarios: {
     generate_ordenes_credito: {
       executor: 'per-vu-iterations',
-      vus: 1,
-      iterations: 30,
-      maxDuration: '2m',
+      vus: 20,          // 20 usuarios virtuales
+      iterations: 50,   // 20 VUs x 50 iteraciones = 1000 órdenes
+      maxDuration: '10m', // Aumentado a 10 minutos
     },
+  },
+  thresholds: {
+    error_rate: ['rate<0.05'],
+    login_duration: ['p(95)<3000'],
+    get_contratos_duration: ['p(95)<2000'],
   },
 };
 
+// Contador global para progreso
+let ordenesGeneradasGlobal = 0;
+let creditosInsuficientesGlobal = 0;
+
 // Variables que se acumularán
-let ordenesGeneradasList = [];
-let creditosInsuficientesCount = 0;
 let limiteTotal = 0;
 let saldoUsadoInicial = 0;
 let creditoDisponible = 0;
@@ -97,20 +104,19 @@ function login() {
       const body = response.json();
       const token = body.data?.token || body.token;
       if (token) {
-        console.log(`✅ Login exitoso`);
         return token;
       }
     } catch (e) {
       console.log(`Error parsing login response: ${e}`);
     }
   }
-  console.log(`❌ Login fallido con status: ${response.status}`);
+  console.log(` Login fallido con status: ${response.status}`);
   errorRate.add(1);
   return null;
 }
 
 // Obtener contratos del cliente
-function getContratosCliente(token) {
+function getContratos(token) {
   const startTime = new Date();
   
   const response = http.get(`${API_URL}${CONTRATOS_ENDPOINT}`, {
@@ -123,32 +129,12 @@ function getContratosCliente(token) {
   if (response.status === 200) {
     try {
       const body = response.json();
-      console.log(`Respuesta contratos:`, JSON.stringify(body, null, 2));
-      
-      // Manejar diferentes estructuras de respuesta
-      let contratos = [];
       if (body.ok && body.data && Array.isArray(body.data)) {
-        contratos = body.data;
-      } else if (Array.isArray(body)) {
-        contratos = body;
-      } else if (body.data && Array.isArray(body.data)) {
-        contratos = body.data;
-      } else if (body.contratos && Array.isArray(body.contratos)) {
-        contratos = body.contratos;
-      }
-      
-      if (contratos.length > 0) {
-        console.log(` Contratos encontrados: ${contratos.length}`);
-        return contratos;
-      } else {
-        console.log(` No se encontraron contratos en la respuesta`);
+        return body.data;
       }
     } catch (e) {
       console.log(`Error parsing contratos: ${e}`);
     }
-  } else {
-    console.log(`❌ Error obteniendo contratos: ${response.status}`);
-    console.log(`Respuesta: ${response.body}`);
   }
   return [];
 }
@@ -163,28 +149,22 @@ function inicializarCredito() {
   console.log('║         INICIALIZANDO CRÉDITO DEL CLIENTE                  ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   
-  // 1. Login
   const token = login();
   if (!token) {
-    console.log('❌ No se pudo obtener token');
+    console.log(' No se pudo obtener token');
     return false;
   }
   
-  // 2. Obtener contratos del cliente
-  const contratos = getContratosCliente(token);
+  const contratos = getContratos(token);
   
   if (contratos.length > 0) {
     let limiteTotalTemp = 0;
     let saldoUsadoTemp = 0;
     
     contratos.forEach(contrato => {
-      const estado = contrato.estado || contrato.status;
-      if (estado === 'VIGENTE' || estado === 'ACTIVO' || estado === 'vigente' || estado === 'activo') {
-        const limite = parseFloat(contrato.limite_credito || contrato.limite || 0);
-        const saldo = parseFloat(contrato.saldo_usado || contrato.saldoUsado || contrato.usado || 0);
-        limiteTotalTemp += limite;
-        saldoUsadoTemp += saldo;
-        console.log(`   Contrato: ${contrato.numero_contrato} | Límite: Q${limite} | Usado: Q${saldo}`);
+      if (contrato.estado === 'VIGENTE' || contrato.estado === 'ACTIVO') {
+        limiteTotalTemp += parseFloat(contrato.limite_credito || 0);
+        saldoUsadoTemp += parseFloat(contrato.saldo_usado || 0);
       }
     });
     
@@ -196,16 +176,21 @@ function inicializarCredito() {
     console.log('\n┌────────────────────────────────────────────────────────┐');
     console.log('│           ESTADO INICIAL DEL CLIENTE                   │');
     console.log('├────────────────────────────────────────────────────────┤');
-    console.log(`│   LÍMITE TOTAL:                    Q${limiteTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
-    console.log(`│   SALDO USADO (anterior):          Q${saldoUsadoInicial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
-    console.log(`│   CRÉDITO DISPONIBLE:              Q${creditoDisponible.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
+    console.log(`│  LÍMITE TOTAL:                    Q${limiteTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
+    console.log(`│  SALDO USADO (anterior):          Q${saldoUsadoInicial.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
+    console.log(`│  CRÉDITO DISPONIBLE:              Q${creditoDisponible.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} │`);
     console.log('└────────────────────────────────────────────────────────┘');
+    
+    console.log('\n DETALLE DE CONTRATOS:');
+    contratos.forEach((c, idx) => {
+      console.log(`   ${idx + 1}. ${c.numero_contrato} | Límite: Q${parseFloat(c.limite_credito).toLocaleString(undefined, {minimumFractionDigits: 2})} | Usado: Q${parseFloat(c.saldo_usado).toLocaleString(undefined, {minimumFractionDigits: 2})} | Estado: ${c.estado}`);
+    });
   } else {
-    console.log('⚠️ No se encontraron contratos vigentes');
+    console.log(' No se encontraron contratos vigentes');
     console.log('   Usando valores por defecto para la prueba');
-    limiteTotal = 150000;
+    limiteTotal = 160000;
     saldoUsadoInicial = 28695.27;
-    creditoDisponible = 121304.73;
+    creditoDisponible = 131304.73;
     totalGastadoEnNuevasOrdenes = 0;
   }
   
@@ -232,12 +217,13 @@ function generarNumeroOrden(index) {
   const anio = ahora.getFullYear();
   const mes = String(ahora.getMonth() + 1).padStart(2, '0');
   const dia = String(ahora.getDate()).padStart(2, '0');
-  const secuencia = String(index + 1).padStart(4, '0');
+  const secuencia = String(index).padStart(6, '0');
   return `ORD-${anio}${mes}${dia}-${secuencia}`;
 }
 
 // Escenario principal
 export default function () {
+  const vu = __VU;
   const iteration = __ITER;
   
   // Inicializar crédito en la primera iteración
@@ -245,10 +231,14 @@ export default function () {
     inicializarCredito();
   }
   
+  // Incrementar contadores globales
+  ordenesGeneradasGlobal++;
+  const totalActual = ordenesGeneradasGlobal;
+  
   // Verificar crédito disponible
   if (creditoDisponible <= 0) {
-    console.log(`\n❌ [ITER ${iteration}] CRÉDITO INSUFICIENTE - Disponible: Q${creditoDisponible.toFixed(2)}`);
-    creditosInsuficientesCount++;
+    console.log(`\n [VU ${vu}][ITER ${iteration}] CRÉDITO INSUFICIENTE - Disponible: Q${creditoDisponible.toFixed(2)}`);
+    creditosInsuficientesGlobal++;
     creditosInsuficientesMetric.add(1);
     errorRate.add(1);
     return;
@@ -261,16 +251,15 @@ export default function () {
   
   // Verificar si alcanza el crédito
   if (costo > creditoDisponible) {
-    console.log(`\n❌ [ITER ${iteration}] CRÉDITO INSUFICIENTE - Costo: Q${costo.toFixed(2)} | Disponible: Q${creditoDisponible.toFixed(2)}`);
-    creditosInsuficientesCount++;
+    console.log(`\n [VU ${vu}][ITER ${iteration}] CRÉDITO INSUFICIENTE - Costo: Q${costo.toFixed(2)} | Disponible: Q${creditoDisponible.toFixed(2)}`);
+    creditosInsuficientesGlobal++;
     creditosInsuficientesMetric.add(1);
     errorRate.add(1);
     return;
   }
   
   // Generar orden
-  const ordenIndex = ordenesGeneradasList.length + 1;
-  const numeroOrden = generarNumeroOrden(ordenIndex);
+  const numeroOrden = generarNumeroOrden(totalActual);
   const creditoAntes = creditoDisponible;
   creditoDisponible -= costo;
   totalGastadoEnNuevasOrdenes += costo;
@@ -278,66 +267,50 @@ export default function () {
   const nuevoSaldoUsado = saldoUsadoInicial + totalGastadoEnNuevasOrdenes;
   const porcentajeLimite = (nuevoSaldoUsado / limiteTotal) * 100;
   
-  const orden = {
-    numero: ordenIndex,
-    numero_orden: numeroOrden,
-    fecha: new Date().toISOString(),
-    ruta: ruta.nombre,
-    origen: ruta.origen,
-    destino: ruta.destino,
-    distancia_km: ruta.distancia_km,
-    peso_estimado: peso,
-    costo: costo,
-    credito_antes: creditoAntes,
-    credito_despues: creditoDisponible,
-    gasto_acumulado_prueba: totalGastadoEnNuevasOrdenes,
-    gasto_total_cliente: nuevoSaldoUsado,
-    cliente_id: CLIENTE_ID,
-    cliente_nombre: CLIENTE_NOMBRE,
-    iteration: iteration
-  };
-  
-  ordenesGeneradasList.push(orden);
   ordenesCreadas.add(1);
   
-  // Actualizar métricas con el estado actual
+  // Actualizar métricas
   limiteTotalMetric.add(limiteTotal);
   saldoUsadoInicialMetric.add(saldoUsadoInicial);
   creditoDisponibleFinalMetric.add(creditoDisponible);
-  ordenesGeneradasTotal.add(ordenesGeneradasList.length);
-  creditosInsuficientesTotal.add(creditosInsuficientesCount);
+  ordenesGeneradasTotal.add(ordenesGeneradasGlobal);
+  creditosInsuficientesTotal.add(creditosInsuficientesGlobal);
   totalNuevasOrdenesGastado.add(totalGastadoEnNuevasOrdenes);
   
-  // Mostrar orden generada de forma ordenada
-  console.log(`\n [ITER ${iteration}] ORDEN #${ordenIndex}: ${numeroOrden}`);
-  console.log(`    Ruta: ${ruta.nombre}`);
-  console.log(`    Peso: ${peso}kg | Costo: Q${costo.toFixed(2)}`);
-  console.log(`    Crédito restante: Q${creditoDisponible.toFixed(2)}`);
-  console.log(`    Total gastado cliente: Q${nuevoSaldoUsado.toFixed(2)} (${porcentajeLimite.toFixed(1)}% del límite)`);
+  // Mostrar progreso cada 100 órdenes
+  if (totalActual % 100 === 0 || totalActual === 1000) {
+    console.log(`\n PROGRESO: ${totalActual}/1000 órdenes generadas (${(totalActual/1000*100).toFixed(1)}%)`);
+    console.log(`    Crédito restante: Q${creditoDisponible.toFixed(2)}`);
+    console.log(`    Total gastado cliente: Q${nuevoSaldoUsado.toFixed(2)} (${porcentajeLimite.toFixed(1)}% del límite)`);
+  }
   
-  sleep(0.2);
+  // Pausa entre iteraciones
+  sleep(0.05);
 }
 
 // Al finalizar - Guardar archivos JSON
 export function handleSummary(data) {
-  // Obtener los valores finales de las métricas
+  // Obtener valores finales
   const limiteTotalFinal = data.metrics.limite_total?.values?.value || limiteTotal;
   const saldoUsadoInicialFinal = data.metrics.saldo_usado_inicial?.values?.value || saldoUsadoInicial;
   const creditoDisponibleFinal = data.metrics.credito_disponible_final?.values?.value || creditoDisponible;
-  const ordenesGeneradasFinal = data.metrics.ordenes_generadas_total?.values?.value || ordenesGeneradasList.length;
-  const creditosInsuficientesFinal = data.metrics.creditos_insuficientes_total?.values?.value || creditosInsuficientesCount;
+  const ordenesGeneradasFinal = data.metrics.ordenes_generadas_total?.values?.value || ordenesGeneradasGlobal;
+  const creditosInsuficientesFinal = data.metrics.creditos_insuficientes_total?.values?.value || creditosInsuficientesGlobal;
   const totalNuevasOrdenesGastadoFinal = data.metrics.total_nuevas_ordenes_gastado?.values?.value || totalGastadoEnNuevasOrdenes;
   
-  // Cálculos correctos
+  // Cálculos finales
   const totalGastadoCliente = saldoUsadoInicialFinal + totalNuevasOrdenesGastadoFinal;
   const porcentajeUsado = limiteTotalFinal > 0 ? (totalGastadoCliente / limiteTotalFinal) * 100 : 0;
   const totalIntentos = ordenesGeneradasFinal + creditosInsuficientesFinal;
   const tasaExito = ordenesGeneradasFinal > 0 ? (ordenesGeneradasFinal / totalIntentos) * 100 : 0;
   
-  // Resumen en consola ordenado
+  const tiempoPromedioLogin = data.metrics.login_duration?.values?.avg || 0;
+  const tiempoPromedioContratos = data.metrics.get_contratos_duration?.values?.avg || 0;
+  
+  // Resumen en consola
   console.log('\n');
   console.log('╔════════════════════════════════════════════════════════════════════╗');
-  console.log('║                    RESUMEN FINAL DE LA PRUEBA                      ║');
+  console.log('║              RESUMEN FINAL - PRUEBA DE ÓRDENES                     ║');
   console.log('╚════════════════════════════════════════════════════════════════════╝');
   
   console.log('\n┌─────────────── DATOS DEL CLIENTE ───────────────┐');
@@ -347,9 +320,9 @@ export function handleSummary(data) {
   console.log('└────────────────────────────────────────────────┘');
   
   console.log('\n┌─────────────── ESTADO INICIAL ────────────────┐');
-  console.log(`│   Límite total:                 Q${limiteTotalFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
-  console.log(`│   Saldo usado (anterior):       Q${saldoUsadoInicialFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
-  console.log(`│   Crédito disponible:            Q${(limiteTotalFinal - saldoUsadoInicialFinal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
+  console.log(`│  Límite total:                 Q${limiteTotalFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
+  console.log(`│  Saldo usado (anterior):       Q${saldoUsadoInicialFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
+  console.log(`│  Crédito disponible:            Q${(limiteTotalFinal - saldoUsadoInicialFinal).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
   console.log('└────────────────────────────────────────────────┘');
   
   console.log('\n┌─────────────── RESULTADOS DE LA PRUEBA ────────────────┐');
@@ -361,39 +334,42 @@ export function handleSummary(data) {
   console.log('└────────────────────────────────────────────────────────┘');
   
   console.log('\n┌─────────────── ESTADO FINAL ──────────────────┐');
-  console.log(`│   Saldo usado TOTAL:               Q${totalGastadoCliente.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
-  console.log(`│   Crédito disponible restante:      Q${creditoDisponibleFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
-  console.log(`│   Porcentaje del límite utilizado:  ${porcentajeUsado.toFixed(2)}%`.padStart(30) + ' │');
+  console.log(`│  Saldo usado TOTAL:               Q${totalGastadoCliente.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
+  console.log(`│  Crédito disponible restante:      Q${creditoDisponibleFinal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}).padStart(12)} │`);
+  console.log(`│  Porcentaje del límite utilizado:  ${porcentajeUsado.toFixed(2)}%`.padStart(30) + ' │');
   console.log('└────────────────────────────────────────────────┘');
+  
+  console.log('\n┌─────────────── TIEMPOS DE RESPUESTA ─────────────────┐');
+  console.log(`│  Login promedio:                 ${tiempoPromedioLogin.toFixed(2)}ms`.padStart(41) + ' │');
+  console.log(`│  Contratos promedio:             ${tiempoPromedioContratos.toFixed(2)}ms`.padStart(41) + ' │');
+  console.log('└──────────────────────────────────────────────────────┘');
   
   console.log('\n Archivo generado: ordenes-resultado.json');
   console.log('════════════════════════════════════════════════════════════════════\n');
   
-  // Preparar JSON ordenado
+  // Preparar JSON
   const resultadoJson = {
     metadata: {
       fecha_prueba: new Date().toISOString(),
-      tipo_prueba: "Prueba de carga - Control de crédito",
+      tipo_prueba: "PRUEBA DE CARGA - 1000 órdenes con control de crédito",
       cliente: {
         id: CLIENTE_ID,
         nombre: CLIENTE_NOMBRE,
         email: CLIENTE_EMAIL
       },
       configuracion: {
-        vu: 1,
-        iteraciones: 30,
-        rutas_disponibles: RUTAS.length,
-        max_duration: "2m"
+        usuarios_virtuales: 20,
+        iteraciones_por_usuario: 50,
+        total_ordenes_simuladas: ordenesGeneradasFinal,
+        max_duration: "10m"
       }
     },
-    
     estado_inicial: {
       limite_total_credito: limiteTotalFinal,
       saldo_usado_anterior: saldoUsadoInicialFinal,
       credito_disponible_inicial: limiteTotalFinal - saldoUsadoInicialFinal,
       moneda: "GTQ"
     },
-    
     resultados_prueba: {
       metricas_generales: {
         ordenes_generadas: ordenesGeneradasFinal,
@@ -407,20 +383,17 @@ export function handleSummary(data) {
         incremento_porcentual: saldoUsadoInicialFinal > 0 ? parseFloat(((totalNuevasOrdenesGastadoFinal / saldoUsadoInicialFinal) * 100).toFixed(2)) : 0
       }
     },
-    
     estado_final: {
       saldo_usado_total: totalGastadoCliente,
       credito_disponible_final: creditoDisponibleFinal,
       porcentaje_limite_utilizado: parseFloat(porcentajeUsado.toFixed(2)),
       moneda: "GTQ"
     },
-    
     rutas_disponibles: RUTAS,
-    
     metricas_rendimiento: {
       tiempos_respuesta: {
-        login_promedio_ms: data.metrics.login_duration?.values?.avg || 0,
-        contratos_promedio_ms: data.metrics.get_contratos_duration?.values?.avg || 0
+        login_promedio_ms: parseFloat(tiempoPromedioLogin.toFixed(2)),
+        contratos_promedio_ms: parseFloat(tiempoPromedioContratos.toFixed(2))
       },
       total_peticiones_http: data.metrics.http_reqs?.values?.count || 0,
       tasa_error: data.metrics.error_rate?.values?.rate || 0

@@ -1,17 +1,17 @@
 {
   "metadata": {
-    "fecha_prueba": "2026-04-16T19:34:34.600Z",
-    "tipo_prueba": "Prueba de carga - Control de crédito",
+    "fecha_prueba": "2026-04-16T21:57:59.061Z",
+    "tipo_prueba": "PRUEBA DE CARGA - 1000 órdenes con control de crédito",
     "cliente": {
       "id": 36,
       "nombre": "Jens Prueba",
       "email": "probando@logitrans.com"
     },
     "configuracion": {
-      "vu": 1,
-      "iteraciones": 30,
-      "rutas_disponibles": 2,
-      "max_duration": "2m"
+      "usuarios_virtuales": 20,
+      "iteraciones_por_usuario": 50,
+      "total_ordenes_simuladas": 50,
+      "max_duration": "10m"
     }
   },
   "estado_inicial": {
@@ -22,21 +22,21 @@
   },
   "resultados_prueba": {
     "metricas_generales": {
-      "ordenes_generadas": 30,
+      "ordenes_generadas": 50,
       "creditos_insuficientes": 0,
-      "total_intentos": 30,
+      "total_intentos": 50,
       "tasa_exito_porcentaje": 100
     },
     "gastos": {
-      "total_gastado_nuevas_ordenes": 41331.60000000001,
-      "total_gastado_acumulado_cliente": 70026.87000000001,
-      "incremento_porcentual": 144.04
+      "total_gastado_nuevas_ordenes": 67781.40000000001,
+      "total_gastado_acumulado_cliente": 96476.67000000001,
+      "incremento_porcentual": 236.21
     }
   },
   "estado_final": {
-    "saldo_usado_total": 70026.87000000001,
-    "credito_disponible_final": 89973.13000000003,
-    "porcentaje_limite_utilizado": 43.77,
+    "saldo_usado_total": 96476.67000000001,
+    "credito_disponible_final": 63523.32999999996,
+    "porcentaje_limite_utilizado": 60.3,
     "moneda": "GTQ"
   },
   "rutas_disponibles": [
@@ -61,10 +61,10 @@
   ],
   "metricas_rendimiento": {
     "tiempos_respuesta": {
-      "login_promedio_ms": 289,
-      "contratos_promedio_ms": 2900
+      "login_promedio_ms": 1741.5,
+      "contratos_promedio_ms": 941.25
     },
-    "total_peticiones_http": 2,
+    "total_peticiones_http": 40,
     "tasa_error": 0
   }
 }

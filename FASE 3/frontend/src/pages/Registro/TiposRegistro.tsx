@@ -14,12 +14,16 @@ const TiposRegistro: React.FC = () => {
     nombres: '',
     apellidos: '',
     telefono: '',
+    pais: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Lista de países - Cobertura actual de LogiTrans
+  const paises = ['Guatemala', 'El Salvador', 'Honduras'];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -49,6 +53,7 @@ const TiposRegistro: React.FC = () => {
         nombres: formData.nombres,
         apellidos: formData.apellidos,
         telefono: formData.telefono,
+        pais: formData.pais,
       });
 
       setSuccess(`${response.mensaje} Ahora puedes iniciar sesión.`);
@@ -62,6 +67,7 @@ const TiposRegistro: React.FC = () => {
         nombres: '',
         apellidos: '',
         telefono: '',
+        pais: '',
         email: '',
         password: '',
         confirmPassword: '',
@@ -199,6 +205,24 @@ const TiposRegistro: React.FC = () => {
                   className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300" 
                   placeholder="1234-5678"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="pais" className="block text-gray-700 font-medium mb-2">País</label>
+                <select 
+                  id="pais" 
+                  name="pais"
+                  value={formData.pais}
+                  onChange={handleInputChange}
+                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                >
+                  <option value="">Selecciona tu país</option>
+                  {paises.map((pais) => (
+                    <option key={pais} value={pais}>
+                      {pais}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

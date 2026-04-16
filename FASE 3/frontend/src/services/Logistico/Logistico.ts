@@ -18,6 +18,7 @@ export type ClienteSimple = {
   nit: string;
   email: string;
   telefono?: string;
+  pais?: string;
   tipo_usuario?: string;
 };
 

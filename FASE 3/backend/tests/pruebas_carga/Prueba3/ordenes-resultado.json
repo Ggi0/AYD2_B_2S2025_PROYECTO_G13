@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "fecha_prueba": "2026-04-16T19:34:34.600Z",
+    "tipo_prueba": "Prueba de carga - Control de crédito",
+    "cliente": {
+      "id": 36,
+      "nombre": "Jens Prueba",
+      "email": "probando@logitrans.com"
+    },
+    "configuracion": {
+      "vu": 1,
+      "iteraciones": 30,
+      "rutas_disponibles": 2,
+      "max_duration": "2m"
+    }
+  },
+  "estado_inicial": {
+    "limite_total_credito": 160000,
+    "saldo_usado_anterior": 28695.27,
+    "credito_disponible_inicial": 131304.73,
+    "moneda": "GTQ"
+  },
+  "resultados_prueba": {
+    "metricas_generales": {
+      "ordenes_generadas": 30,
+      "creditos_insuficientes": 0,
+      "total_intentos": 30,
+      "tasa_exito_porcentaje": 100
+    },
+    "gastos": {
+      "total_gastado_nuevas_ordenes": 41331.60000000001,
+      "total_gastado_acumulado_cliente": 70026.87000000001,
+      "incremento_porcentual": 144.04
+    }
+  },
+  "estado_final": {
+    "saldo_usado_total": 70026.87000000001,
+    "credito_disponible_final": 89973.13000000003,
+    "porcentaje_limite_utilizado": 43.77,
+    "moneda": "GTQ"
+  },
+  "rutas_disponibles": [
+    {
+      "id": 1,
+      "origen": "Puerto Barrios",
+      "destino": "Guatemala",
+      "distancia_km": 300,
+      "tipo_carga": "GENERAL",
+      "costo_por_km": 5,
+      "nombre": "Puerto Barrios → Guatemala"
+    },
+    {
+      "id": 2,
+      "origen": "Quetzaltenango",
+      "destino": "Guatemala",
+      "distancia_km": 200,
+      "tipo_carga": "GENERAL",
+      "costo_por_km": 5,
+      "nombre": "Quetzaltenango → Guatemala"
+    }
+  ],
+  "metricas_rendimiento": {
+    "tiempos_respuesta": {
+      "login_promedio_ms": 289,
+      "contratos_promedio_ms": 2900
+    },
+    "total_peticiones_http": 2,
+    "tasa_error": 0
+  }
+}

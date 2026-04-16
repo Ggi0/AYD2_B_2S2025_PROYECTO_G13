@@ -84,7 +84,7 @@ export type CrearContratoPayload = {
   rutas: RutaAutorizada[];
 };
 
-// src/services/api.ts - Agregar estos tipos
+
 
 export type Tarifario = {
   id: number;
@@ -178,9 +178,6 @@ class ApiService {
     });
   }
 
-  // src/services/api.ts - En la clase ApiService, modificar getMe
-
-// src/services/api.ts - Modificar getMe
 
 async getMe(token: string): Promise<ApiResponse<MeResponse>> {
   console.log('[apiService] getMe called with token:', token?.substring(0, 30) + '...');
@@ -195,7 +192,7 @@ async getMe(token: string): Promise<ApiResponse<MeResponse>> {
   return response;
 }
 
-  // ============ MÉTODOS DE CONTRATOS ============
+  // metodos relacionados a contratos
   
   /**
    * Crear un nuevo contrato
@@ -238,7 +235,6 @@ async getMe(token: string): Promise<ApiResponse<MeResponse>> {
   /**
    * Validar si un cliente puede realizar una ruta
    */
-  // src/services/api.ts - Ya tienes este método, verifica que esté correcto
 
 async validarCliente(
   clienteId: number,
@@ -269,8 +265,6 @@ async validarCliente(
   }
 
 
-  // src/services/api.ts - En la clase ApiService, agregar:
-
 async obtenerTarifarios(): Promise<ApiResponse<Tarifario[]>> {
   return this.request<Tarifario[]>("/tarifario", {
     method: "GET",
@@ -283,9 +277,6 @@ async obtenerRangosReferencia(): Promise<ApiResponse<RangosReferencia>> {
   });
 }
 
-
-// src/services/api.ts
-// Agregar este método en la clase ApiService
 
 /**
  * Listar todos los contratos (para vista de logística)

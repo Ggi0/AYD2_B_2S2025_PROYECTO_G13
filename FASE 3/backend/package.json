@@ -4,7 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "mocha tests/pruebas_unitarias/**/*.test.js --exit"
+    "test": "npm run test:unit",
+    "test:unit": "mocha tests/pruebas_unitarias/**/*.test.js --exit",
+    "test:int": "mocha tests/pruebas_integracion/**/*.test.js --timeout 10000 --exit",
+    "test:all": "mocha tests/**/*.test.js --exit"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +28,7 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "sinon": "^21.1.2"
+    "sinon": "^21.1.2",
+    "supertest": "^7.2.2"
   }
 }

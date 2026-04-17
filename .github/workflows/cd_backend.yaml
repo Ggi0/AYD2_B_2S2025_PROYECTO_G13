@@ -66,6 +66,16 @@ jobs:
             docker image prune -f
           EOF
 
+      - name: Setup SSH key 2
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          cat <<'KEY' > ~/.ssh/id_rsa
+          ${{ secrets.EC2_SSH_KEY }}
+          KEY
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST_2 }} >> ~/.ssh/known_hosts
+
       - name: Deploy on EC2 2
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST_2 }} << 'EOF'

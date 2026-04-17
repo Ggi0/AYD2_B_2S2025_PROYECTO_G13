@@ -313,7 +313,7 @@ CREATE TABLE auditoria (
 BEGIN TRY
   -- Eliminar constraint viejo si existe
   ALTER TABLE usuarios DROP CONSTRAINT CK_usuarios_estado__98DEE8;
-END TRY
+END TRY 
 BEGIN CATCH
   -- Ignorar si no existe
 END CATCH;

@@ -5,6 +5,9 @@ import { loginRequest } from '../../services/auth/authApi';
 import { useAuth } from '../../context/AuthContext';
 import MenuPrincipal from '../../components/principal/MenuPrincipal';
 
+
+
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { setSession } = useAuth();

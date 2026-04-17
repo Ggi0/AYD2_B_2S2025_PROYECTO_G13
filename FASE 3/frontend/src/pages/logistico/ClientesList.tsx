@@ -57,6 +57,7 @@ const ClientesList: React.FC = () => {
     email: '',
     nit: '',
     telefono: '',
+    pais: '',
     tipo_usuario: 'CLIENTE_CORPORATIVO',
     estado: 'ACTIVO',
     password: '',
@@ -207,6 +208,7 @@ const ClientesList: React.FC = () => {
         email: '',
         nit: '',
         telefono: '',
+        pais: '',
         tipo_usuario: 'CLIENTE_CORPORATIVO',
         estado: 'ACTIVO',
         password: '',
@@ -587,6 +589,9 @@ const ClientesList: React.FC = () => {
                           NIT
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                          País
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
                           Estado
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
@@ -625,6 +630,11 @@ const ClientesList: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-mono text-gray-600">{cliente.nit}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                              {cliente.pais || 'No registrado'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getEstadoBadge(cliente.estado)}
@@ -1032,6 +1042,22 @@ const ClientesList: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  País
+                </label>
+                <select
+                  value={editingCliente.pais || ''}
+                  onChange={(e) => handleEditChange('pais', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecciona un país</option>
+                  <option value="Guatemala">Guatemala</option>
+                  <option value="El Salvador">El Salvador</option>
+                  <option value="Honduras">Honduras</option>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1543,6 +1569,22 @@ const ClientesList: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    País
+                  </label>
+                  <select
+                    value={newCliente.pais || ''}
+                    onChange={(e) => handleCreateChange('pais', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Selecciona un país</option>
+                    <option value="Guatemala">Guatemala</option>
+                    <option value="El Salvador">El Salvador</option>
+                    <option value="Honduras">Honduras</option>
+                  </select>
                 </div>
 
                 <div>

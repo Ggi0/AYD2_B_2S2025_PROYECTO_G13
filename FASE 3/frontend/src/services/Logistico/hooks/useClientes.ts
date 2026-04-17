@@ -8,6 +8,7 @@ export type Cliente = {
   email: string;
   nombre: string;
   telefono?: string;
+  pais?: string;
   tipo_usuario: string;
   estado: string;
   fecha_creacion?: string;

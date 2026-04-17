@@ -19,6 +19,8 @@ type CuentaPorCobrar = any;
 type RegistrarPagoPayload = any;
 import "../finanzas/finanzas.css";
 
+import { conectarSocketFacturacion } from "../../services/facturacion/socketFacturacion";
+
 const fmt = (n: number) =>
   `Q ${(n ?? 0).toLocaleString("es-GT", { minimumFractionDigits: 2 })}`;
 const fmtDate = (s?: string) => (s ? new Date(s).toLocaleDateString("es-GT") : "—");
@@ -63,6 +65,31 @@ const FacturacionPage: React.FC = () => {
   }, [filtroEstado, filtroFechaDesde, filtroFechaHasta]);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  useEffect(() => {
+    const desconectar = conectarSocketFacturacion((payload) => {
+
+      // Solo insertar si el filtro de estado permite ver BORRADOR
+      // (si el filtro está vacío = "Todos", también se inserta)
+      const filtroPermite =
+        filtroEstado === "" || filtroEstado === "BORRADOR";
+
+      if (filtroPermite) {
+        setFacturas((prev) => {
+          // Evitar duplicados si el GET inicial ya trajo esta factura
+          const yaExiste = prev.some((f) => f.id === payload.borrador.id);
+          if (yaExiste) return prev;
+          return [payload.borrador, ...prev];
+        });
+      }
+
+      // El mensaje de éxito siempre aparece, independiente del filtro
+      msgOk(payload.mensaje);
+    });
+
+    return desconectar;
+  // filtroEstado va en las dependencias para que el closure tenga el valor actual
+  }, [filtroEstado]);
 
   /* ── Acciones ── */
   const msgOk = (m: string) => {

@@ -93,7 +93,7 @@ const obtenerRiesgoCliente = async (req, res) => {
  */
 const crearCliente = async (req, res) => {
   try {
-    const { nombre, email, nit, telefono, tipo_usuario, estado, password } = req.body;
+    const { nombre, email, nit, telefono, pais, tipo_usuario, estado, password } = req.body;
     const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
     const ip = req.ip;
 
@@ -113,6 +113,7 @@ const crearCliente = async (req, res) => {
         email,
         nit,
         telefono: telefono || null,
+        pais: pais || null,
         tipo_usuario,
         estado,
         password_hash
@@ -130,6 +131,7 @@ const crearCliente = async (req, res) => {
         email: usuarioCreado.email,
         nit: usuarioCreado.nit,
         telefono: usuarioCreado.telefono,
+        pais: usuarioCreado.pais,
         tipo_usuario: usuarioCreado.tipo_usuario,
         estado: usuarioCreado.estado,
         fecha_registro: usuarioCreado.fecha_registro

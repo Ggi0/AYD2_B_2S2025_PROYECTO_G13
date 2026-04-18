@@ -5,7 +5,20 @@ import { useAuth } from '../../context/AuthContext';
 import ClientHeader from '../../components/client/ClientHeader';
 import ClientMenu from '../../components/client/ClientMenu';
 import { getPagosByCliente, getCobrosCliente, registrarPago } from '../../services/facturacion/pagos';
+import { formatMoney } from '../../services/client/client';
+import apiService from '../../services/api';
 import './cliente_estilo.css';
+
+// Helper para obtener código de moneda desde moneda_id
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
 
 /* ── Tipos ─────────────────────────────────────────────── */
 interface Pago {
@@ -32,8 +45,8 @@ interface CuentaPorCobrar {
 }
 
 /* ── Utilidades ─────────────────────────────────────────── */
-const fmtMoney = (n: number) =>
-  `Q ${(n ?? 0).toLocaleString('es-GT', { minimumFractionDigits: 2 })}`;
+const fmtMoney = (n: number, monedaCode: string = 'GTQ') =>
+  formatMoney(n ?? 0, monedaCode);
 
 const fmtDate = (s?: string) =>
   s ? new Date(s).toLocaleDateString('es-GT', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -57,7 +70,7 @@ const cobroBadge = (estado: string) => {
 
 
 /* ── Modal de detalle de pago ───────────────────────────── */
-const ModalDetallePago: React.FC<{ pago: Pago; onClose: () => void }> = ({ pago, onClose }) => (
+const ModalDetallePago: React.FC<{ pago: Pago; onClose: () => void; monedaCode: string }> = ({ pago, onClose, monedaCode }) => (
   <div className="cl-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
     <div className="cl-modal">
       <div className="cl-modal-header">
@@ -103,7 +116,7 @@ const ModalDetallePago: React.FC<{ pago: Pago; onClose: () => void }> = ({ pago,
 
           <div className="cl-kv-row cl-kv-total">
             <span className="kv-label">Monto pagado</span>
-            <span className="kv-value">{fmtMoney(pago.monto)}</span>
+            <span className="kv-value">{fmtMoney(pago.monto, monedaCode)}</span>
           </div>
         </div>
 
@@ -127,7 +140,8 @@ const ModalDetallePago: React.FC<{ pago: Pago; onClose: () => void }> = ({ pago,
    ══════════════════════════════════════════════════════════ */
 const ClientePagosPage: React.FC = () => {
   const { user } = useAuth();
-
+  const [monedaCode, setMonedaCode] = useState('GTQ'); // Moneda por defecto
+  
   /* Estado */
   const [pagos,   setPagos]   = useState<Pago[]>([]);
   const [cobros,  setCobros]  = useState<CuentaPorCobrar[]>([]);
@@ -166,15 +180,23 @@ const [loadingPago, setLoadingPago] = useState(false);
     setLoading(true);
     setError(null);
     try {
-      const [resPagos, resCobros] = await Promise.all([
+      const [resPagos, resCobros, resContratos] = await Promise.all([
         getPagosByCliente(userId),
         getCobrosCliente(userId, { limit: 100 }),
+        (apiService as any).listarContratosPorCliente(userId),
       ]);
 
       setPagos(resPagos?.data ?? []);
 
       const listaCobros = resCobros?.data?.cuentas ?? resCobros?.data ?? [];
       setCobros(listaCobros);
+      
+      // Obtener la moneda del primer contrato activo
+      if (resContratos?.ok && resContratos.data?.length > 0) {
+        const contratoActivo = resContratos.data[0];
+        const moneda = getCodigoMonedaDesdeId(contratoActivo.moneda_id);
+        setMonedaCode(moneda);
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error al cargar datos');
     } finally {
@@ -252,7 +274,7 @@ const [loadingPago, setLoadingPago] = useState(false);
             <div className="cl-stat-icon cl-stat-icon-verde">💰</div>
             <div className="cl-stat-info">
               <p className="stat-label">Total pagado</p>
-              <p className="stat-value-sm stat-value-verde">{fmtMoney(totalPagado)}</p>
+              <p className="stat-value-sm stat-value-verde">{fmtMoney(totalPagado, monedaCode)}</p>
             </div>
           </div>
           <div className="cl-stat-card">
@@ -280,7 +302,7 @@ const [loadingPago, setLoadingPago] = useState(false);
             <div className="cl-stat-icon cl-stat-icon-rojo">⏳</div>
             <div className="cl-stat-info">
               <p className="stat-label">Saldo pendiente</p>
-              <p className="stat-value-sm stat-value-rojo">{fmtMoney(pendienteTotal)}</p>
+              <p className="stat-value-sm stat-value-rojo">{fmtMoney(pendienteTotal, monedaCode)}</p>
             </div>
           </div>
         </div>
@@ -368,7 +390,7 @@ const [loadingPago, setLoadingPago] = useState(false);
                         <td>{pago.banco ?? '—'}</td>
                         <td>
                           <strong style={{ color: 'var(--cl-verde)' }}>
-                            {fmtMoney(pago.monto)}
+                            {fmtMoney(pago.monto, monedaCode)}
                           </strong>
                         </td>
                         <td>
@@ -388,7 +410,7 @@ const [loadingPago, setLoadingPago] = useState(false);
                         Total {filtroTipo !== 'TODOS' ? `(${filtroTipo})` : ''}
                       </td>
                       <td style={{ padding: '10px 14px', color: 'var(--cl-verde)' }}>
-                        {fmtMoney(pagosFiltrados.reduce((s, p) => s + (p.monto ?? 0), 0))}
+                        {fmtMoney(pagosFiltrados.reduce((s, p) => s + (p.monto ?? 0), 0), monedaCode)}
                       </td>
                       <td />
                     </tr>
@@ -442,7 +464,7 @@ const [loadingPago, setLoadingPago] = useState(false);
                           <td className="mono">
                             {c.numero_factura ?? `ID:${c.factura_id}`}
                           </td>
-                          <td>{fmtMoney(c.monto_original)}</td>
+                          <td>{fmtMoney(c.monto_original, monedaCode)}</td>
                           <td>
                             <strong
                               style={{
@@ -451,7 +473,7 @@ const [loadingPago, setLoadingPago] = useState(false);
                                   : 'var(--cl-verde)',
                               }}
                             >
-                              {fmtMoney(c.saldo_pendiente)}
+                              {fmtMoney(c.saldo_pendiente, monedaCode)}
                             </strong>
                           </td>
                           <td style={{ color: vencida ? 'var(--cl-rojo)' : undefined }}>
@@ -511,6 +533,7 @@ const [loadingPago, setLoadingPago] = useState(false);
         <ModalDetallePago
           pago={pagoDetalle}
           onClose={() => setPagoDetalle(null)}
+          monedaCode={monedaCode}
         />
       )}
 
@@ -532,7 +555,7 @@ const [loadingPago, setLoadingPago] = useState(false);
 
           <div className="cl-kv-row">
             <span>Saldo pendiente</span>
-            <strong>{fmtMoney(cxcSeleccionada.saldo_pendiente)}</strong>
+            <strong>{fmtMoney(cxcSeleccionada.saldo_pendiente, monedaCode)}</strong>
           </div>
 
           <hr />

@@ -1,18 +1,31 @@
 // src/pages/client/ClientContractDetail.tsx
 import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaFileContract, FaChartLine, FaCalendarAlt, FaRoute, FaTag } from 'react-icons/fa';
+import { FaArrowLeft, FaFileContract, FaChartLine, FaCalendarAlt, FaRoute, FaTag, FaGlobeAmericas } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import { useContratos } from '../../services/Logistico/hooks/useContratos';
+import { useMonedas } from '../../services/monedas/hooks/useMonedas';
 import { formatMoney, formatDate, getContratoEstadoInfo } from '../../services/Logistico/Logistico';
 import ClientHeader from '../../components/client/ClientHeader';
 import ClientMenu from '../../components/client/ClientMenu';
+
+// Función para mapear moneda_id a código de moneda
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
 
 const ClientContractDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { contratoActual: contratoActualOriginal, obtenerContrato, loading, error, limpiarError } = useContratos();
+  const { obtenerMonedaById, obtenerSimboloMoneda } = useMonedas();
   const contratoActual = contratoActualOriginal as any;
 
   const userName = user?.nombres && user?.apellidos 
@@ -100,9 +113,22 @@ const ClientContractDetail: React.FC = () => {
               <FaChartLine className="h-6 w-6 text-orange-600" />
               <h3 className="font-semibold text-gray-900">Crédito</h3>
             </div>
-            <p className="text-gray-700">Límite: {formatMoney(contratoActual.limite_credito)}</p>
-            <p className="text-gray-700">Usado: {formatMoney(saldoUsado)}</p>
-            <p className="text-green-600 font-medium">Disponible: {formatMoney(creditoDisponible)}</p>
+            <p className="text-gray-700">Límite: {formatMoney(contratoActual.limite_credito, getCodigoMonedaDesdeId(contratoActual.moneda_id))}</p>
+            <p className="text-gray-700">Usado: {formatMoney(saldoUsado, getCodigoMonedaDesdeId(contratoActual.moneda_id))}</p>
+            <p className="text-green-600 font-medium">Disponible: {formatMoney(creditoDisponible, getCodigoMonedaDesdeId(contratoActual.moneda_id))}</p>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center gap-3 mb-3">
+              <FaGlobeAmericas className="h-6 w-6 text-orange-600" />
+              <h3 className="font-semibold text-gray-900">Moneda</h3>
+            </div>
+            <div className="space-y-2">
+              <p className="text-gray-700">
+                <span className="font-medium">{obtenerMonedaById(contratoActual.moneda_id || 1)?.nombre || 'QUETZAL'}</span>
+              </p>
+              <p className="text-2xl font-bold text-orange-600">{obtenerSimboloMoneda(contratoActual.moneda_id || 1)}</p>
+            </div>
           </div>
           
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -135,7 +161,7 @@ const ClientContractDetail: React.FC = () => {
                   {contratoActual.tarifas_negociadas.map((tarifa, idx) => (
                     <tr key={idx} className="border-t">
                       <td className="px-4 py-2">{tarifa.tipo_unidad}</td>
-                      <td className="px-4 py-2">{formatMoney(tarifa.costo_km_negociado)}/km</td>
+                      <td className="px-4 py-2">{formatMoney(tarifa.costo_km_negociado, getCodigoMonedaDesdeId(contratoActual.moneda_id))}/km</td>
                     </tr>
                   ))}
                 </tbody>

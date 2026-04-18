@@ -9,6 +9,17 @@ import LogisticMenu from '../../components/logistico/LogisticMenu';
 import { useAuth } from '../../context/AuthContext';
 import apiService from '../../services/api';
 
+// Función para mapear moneda_id a código de moneda
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
+
 const ContratosList: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -223,10 +234,19 @@ const ContratosList: React.FC = () => {
                           <div className="text-sm">
                             <span className="text-gray-600">Crédito: </span>
                             <span className="font-medium text-gray-900">
-                              {formatMoney(contrato.limite_credito)}
+                              {formatMoney(contrato.limite_credito, getCodigoMonedaDesdeId(contrato.moneda_id))}
                             </span>
                             <span className="text-gray-600 ml-2">
-                              (Usado: {formatMoney(saldoUsado)})
+                              (Usado: {formatMoney(saldoUsado, getCodigoMonedaDesdeId(contrato.moneda_id))})
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <FaCoins className="h-4 w-4 text-purple-400" />
+                          <div className="text-sm">
+                            <span className="text-gray-600">Moneda: </span>
+                            <span className="font-medium text-purple-700 bg-purple-50 px-2 py-1 rounded">
+                              {contrato.nombre_moneda || `Moneda ${contrato.moneda_id}`}
                             </span>
                           </div>
                         </div>
@@ -235,7 +255,7 @@ const ContratosList: React.FC = () => {
                           <div className="text-sm">
                             <span className="text-gray-600">Disponible: </span>
                             <span className="font-bold text-green-600">
-                              {formatMoney(creditoDisponible)}
+                              {formatMoney(creditoDisponible, getCodigoMonedaDesdeId(contrato.moneda_id))}
                             </span>
                           </div>
                         </div>

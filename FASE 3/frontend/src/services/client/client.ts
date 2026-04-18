@@ -256,12 +256,34 @@ export const ClientService = {
 
 // ============ UTILIDADES ==========
 
-export const formatMoney = (value: number): string => {
-  return new Intl.NumberFormat("es-GT", {
+export const formatMoney = (value: number, monedaCode?: string): string => {
+  // Mapeo de códigos a monedas soportadas por Intl.NumberFormat
+  const monedaMap: Record<string, string> = {
+    'GTQ': 'GTQ',  // Quetzal Guatemalteco
+    'USD': 'USD',  // Dólar Estadounidense
+    'HNL': 'HNL',  // Lempira Hondureño
+    'SVC': 'SVC',  // Colón Salvadoreño - se formatea manualmente
+  };
+  
+  const codigoMoneda = monedaMap[monedaCode || 'GTQ'] || 'GTQ';
+  
+  // Especial para SVC: construir manualmente el formato
+  if (codigoMoneda === 'SVC') {
+    const numero = value.toLocaleString("es-GT", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `₡ ${numero}`;
+  }
+  
+  // Para otras monedas, usar Intl.NumberFormat
+  const formatter = new Intl.NumberFormat("es-GT", {
     style: "currency",
-    currency: "GTQ",
+    currency: codigoMoneda,
     minimumFractionDigits: 2,
-  }).format(value);
+  });
+  
+  return formatter.format(value);
 };
 
 export const formatDate = (dateString: string): string => {

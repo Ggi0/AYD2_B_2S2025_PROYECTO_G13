@@ -1,22 +1,63 @@
 // FASE 2/backend/src/controllers/contratos/contratoController.js
 const contratoService = require('../../services/contratos/contratoService');
 
+/**
+ * Crea un nuevo contrato de transporte multimoneda
+ * Según enunciado del proyecto:
+ * - Moneda puede ser: GTQ (1), USD (2), HNL (6), SVC (7)
+ * - Si no se especifica, se sugiere por país pero permite override
+ * - La moneda se "pacta" al crear el contrato
+ * @POST /api/contratos
+ * @param {number} cliente_id - ID cliente corporativo (obligatorio)
+ * @param {date} fecha_inicio - Inicio vigencia (obligatorio)
+ * @param {date} fecha_fin - Fin vigencia (obligatorio)
+ * @param {number} limite_credito - Límite en moneda pactada (obligatorio)
+ * @param {number} plazo_pago - 15, 30 o 45 días (obligatorio)
+ * @param {number} [moneda_id] - ID moneda: 1=GTQ, 2=USD, 6=HNL, 7=SVC. Si no se envía, se sugiere por país
+ * @param {string} [pais] - País cliente (para sugerir moneda)
+ */
 const crearContrato = async (req, res) => {
   try {
     const datos           = req.body;
     const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
     const ip              = req.ip;
 
-    // numero_contrato es opcional porque se genera automáticamente
+    // Validar que el usuario esté autenticado
+    if (!usuario_ejecutor) {
+      return res.status(401).json({ ok: false, mensaje: 'Usuario no autenticado. Debe iniciar sesión para crear contratos.' });
+    }
+
+    // Campos obligatorios según enunciado
     const camposObligatorios = ['cliente_id', 'fecha_inicio', 'fecha_fin', 'limite_credito', 'plazo_pago'];
     for (const campo of camposObligatorios) {
       if (!datos[campo]) return res.status(400).json({ ok: false, mensaje: `El campo ${campo} es obligatorio` });
     }
 
+    // Validar moneda_id si se proporciona (solo las 4 del proyecto)
+    const MONEDAS_PERMITIDAS = [1, 2, 6, 7]; // GTQ, USD, HNL, SVC
+    if (datos.moneda_id && !MONEDAS_PERMITIDAS.includes(datos.moneda_id)) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: 'Moneda inválida. Monedas permitidas: 1=GTQ, 2=USD, 6=HNL, 7=SVC'
+      });
+    }
+
     const contrato = await contratoService.crearContrato(datos, usuario_ejecutor, ip);
     res.status(201).json({ ok: true, mensaje: 'Contrato creado correctamente', data: contrato });
   } catch (error) {
-    res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al crear contrato' });
+    // Log detallado del error para debugging
+    console.error('[contratoController.crearContrato] Error:', {
+      message: error.mensaje || error.message,
+      status: error.status || 500,
+      stack: error.stack,
+      details: error
+    });
+
+    res.status(error.status || 500).json({ 
+      ok: false, 
+      mensaje: error.mensaje || error.message || 'Error al crear contrato',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -89,10 +130,42 @@ const modificarContrato = async (req, res) => {
     const usuario_ejecutor = req.user ? Number(req.user.sub) : null;
     const ip              = req.ip;
 
+    // Validación de autenticación
+    if (!usuario_ejecutor) {
+      return res.status(401).json({ 
+        ok: false, 
+        mensaje: 'Usuario no autenticado. Debe iniciar sesión para modificar contratos.' 
+      });
+    }
+
+    // Validación de ID
+    if (!id || isNaN(Number(id))) {
+      return res.status(400).json({ 
+        ok: false, 
+        mensaje: 'ID de contrato inválido' 
+      });
+    }
+
+    console.log('[contratoController.modificarContrato] Intentando actualizar contrato:', {
+      id: Number(id),
+      usuario_ejecutor,
+      cambios: Object.keys(datos)
+    });
+
     const contratoActualizado = await contratoService.modificarContrato(Number(id), datos, usuario_ejecutor, ip);
     res.status(200).json({ ok: true, mensaje: 'Contrato actualizado correctamente', data: contratoActualizado });
   } catch (error) {
-    res.status(error.status || 500).json({ ok: false, mensaje: error.mensaje || 'Error al modificar contrato' });
+    console.error('[contratoController.modificarContrato] Error:', {
+      message: error.mensaje || error.message,
+      status: error.status || 500,
+      stack: error.stack
+    });
+
+    res.status(error.status || 500).json({ 
+      ok: false, 
+      mensaje: error.mensaje || error.message || 'Error al modificar contrato',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

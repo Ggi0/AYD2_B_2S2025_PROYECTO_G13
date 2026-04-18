@@ -8,6 +8,17 @@ import { useAuth } from '../../context/AuthContext';
 import { useClientContracts } from '../../services/client/hooks/useClientContracts';
 import { formatMoney, formatDate, getContratoEstadoInfo } from '../../services/client/client';
 
+// Helper para obtener código de moneda desde moneda_id
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
+
 const PrincipalClient: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -130,9 +141,9 @@ const PrincipalClient: React.FC = () => {
           <StatCard
             icon={FaCreditCard}
             title="Crédito Disponible"
-            value={formatMoney(estadisticas.availableCredit)}
+            value={contratoActivo ? formatMoney(estadisticas.availableCredit, getCodigoMonedaDesdeId(contratoActivo.moneda_id)) : formatMoney(estadisticas.availableCredit)}
             color="bg-green-500"
-            tooltip={`Límite: ${formatMoney(estadisticas.totalCreditLimit)} • Usado: ${formatMoney(estadisticas.usedCredit)}`}
+            tooltip={contratoActivo ? `Límite: ${formatMoney(estadisticas.totalCreditLimit, getCodigoMonedaDesdeId(contratoActivo.moneda_id))} • Usado: ${formatMoney(estadisticas.usedCredit, getCodigoMonedaDesdeId(contratoActivo.moneda_id))}` : `Límite: ${formatMoney(estadisticas.totalCreditLimit)} • Usado: ${formatMoney(estadisticas.usedCredit)}`}
           />
         </div>
 
@@ -177,16 +188,16 @@ const PrincipalClient: React.FC = () => {
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-500">Límite de Crédito</p>
-                    <p className="text-xl font-bold text-gray-900">{formatMoney(contratoActivo.limite_credito)}</p>
+                    <p className="text-xl font-bold text-gray-900">{formatMoney(contratoActivo.limite_credito, getCodigoMonedaDesdeId(contratoActivo.moneda_id))}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-500">Crédito Utilizado</p>
-                    <p className="text-xl font-bold text-yellow-600">{formatMoney(contratoActivo.saldo_usado || 0)}</p>
+                    <p className="text-xl font-bold text-yellow-600">{formatMoney(contratoActivo.saldo_usado || 0, getCodigoMonedaDesdeId(contratoActivo.moneda_id))}</p>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-sm text-gray-500">Crédito Disponible</p>
                     <p className="text-xl font-bold text-green-600">
-                      {formatMoney((contratoActivo.limite_credito - (contratoActivo.saldo_usado || 0)))}
+                      {formatMoney((contratoActivo.limite_credito - (contratoActivo.saldo_usado || 0)), getCodigoMonedaDesdeId(contratoActivo.moneda_id))}
                     </p>
                   </div>
                 </div>
@@ -198,7 +209,7 @@ const PrincipalClient: React.FC = () => {
                       {contratoActivo.tarifas_negociadas.map((tarifa: any, idx: number) => (
                         <div key={idx} className="bg-blue-50 rounded-lg px-4 py-2">
                           <span className="text-sm font-medium text-blue-700">{tarifa.tipo_unidad}</span>
-                          <span className="text-sm text-blue-600 ml-2">{formatMoney(tarifa.costo_km_negociado)}/km</span>
+                          <span className="text-sm text-blue-600 ml-2">{formatMoney(tarifa.costo_km_negociado, getCodigoMonedaDesdeId(contratoActivo.moneda_id))}/km</span>
                         </div>
                       ))}
                     </div>

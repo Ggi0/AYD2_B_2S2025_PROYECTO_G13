@@ -4,15 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import { FaEye, FaFileContract, FaChartLine, FaCalendarAlt } from 'react-icons/fa';
 import { useAuth } from '../../context/AuthContext';
 import { useClientContracts } from '../../services/client/hooks/useClientContracts';
+import { useMonedas } from '../../services/monedas/hooks/useMonedas';
 import { formatMoney, formatDate, getContratoEstadoInfo } from '../../services/client/client';
 import ClientHeader from '../../components/client/ClientHeader';
 import ClientMenu from '../../components/client/ClientMenu';
 
+// Helper para obtener código de moneda desde moneda_id
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
+
 const ClientContracts: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { contratos, loading, error, estadisticas, cargarContratos, limpiarError } = useClientContracts();
-
+  const { contratos, loading, error, estadisticas, cargarContratos, limpiarError } = useClientContracts();  const { obtenerSimboloMoneda, monedasLoading } = useMonedas();
   const userName = user?.nombres && user?.apellidos 
     ? `${user.nombres} ${user.apellidos}`
     : user?.email?.split('@')[0] || 'Cliente';
@@ -92,7 +103,7 @@ const ClientContracts: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Crédito Disponible</p>
-                <p className="text-2xl font-bold text-teal-600">{formatMoney(estadisticas.availableCredit)}</p>
+                <p className="text-2xl font-bold text-teal-600">{contratos.length > 0 ? formatMoney(estadisticas.availableCredit, getCodigoMonedaDesdeId(contratos[0].moneda_id)) : formatMoney(estadisticas.availableCredit)}</p>
               </div>
               <div className="w-12 h-12 bg-teal-500 rounded-full flex items-center justify-center">
                 <FaChartLine className="w-6 h-6 text-white" />
@@ -104,7 +115,7 @@ const ClientContracts: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Crédito Utilizado</p>
-                <p className="text-2xl font-bold text-yellow-600">{formatMoney(estadisticas.usedCredit)}</p>
+                <p className="text-2xl font-bold text-yellow-600">{contratos.length > 0 ? formatMoney(estadisticas.usedCredit, getCodigoMonedaDesdeId(contratos[0].moneda_id)) : formatMoney(estadisticas.usedCredit)}</p>
               </div>
               <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center">
                 <FaChartLine className="w-6 h-6 text-white" />
@@ -133,6 +144,7 @@ const ClientContracts: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Contrato</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vigencia</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moneda</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Límite Crédito</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saldo Usado</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Crédito Disp.</th>
@@ -155,14 +167,19 @@ const ClientContracts: React.FC = () => {
                           <div>{formatDate(contrato.fecha_inicio)}</div>
                           <div className="text-xs text-gray-400">→ {formatDate(contrato.fecha_fin)}</div>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {formatMoney(contrato.limite_credito)}
+                        <td className="px-6 py-4 text-sm">
+                          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold">
+                            {obtenerSimboloMoneda(contrato.moneda_id || 1)}
+                          </span>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-600">
-                          {formatMoney(saldoUsado)}
+                          {formatMoney(contrato.limite_credito, getCodigoMonedaDesdeId(contrato.moneda_id))}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {formatMoney(saldoUsado, getCodigoMonedaDesdeId(contrato.moneda_id))}
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-green-600">
-                          {formatMoney(creditoDisponible)}
+                          {formatMoney(creditoDisponible, getCodigoMonedaDesdeId(contrato.moneda_id))}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs font-semibold rounded-full ${estadoInfo.bg} ${estadoInfo.color}`}>

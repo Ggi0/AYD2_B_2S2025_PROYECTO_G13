@@ -1,7 +1,7 @@
 // src/pages/logistico/ContratoForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaSave, FaTimes, FaPlus, FaTrash, FaEdit, FaTruck, FaDollarSign, FaMap, FaGift, FaInfoCircle, FaLightbulb, FaCheckCircle, FaRocket } from 'react-icons/fa';
+import { FaSave, FaTimes, FaPlus, FaTrash, FaEdit, FaTruck, FaDollarSign, FaMap, FaGift, FaInfoCircle, FaLightbulb, FaCheckCircle, FaRocket, FaGlobeAmericas } from 'react-icons/fa';
 import { useContratos } from '../../services/Logistico/hooks/useContratos';
 import { getTipoUnidadLabel, formatMoney } from '../../services/Logistico/Logistico';
 import LogisticHeader from '../../components/logistico/LogisticHeader';
@@ -9,6 +9,7 @@ import LogisticMenu from '../../components/logistico/LogisticMenu';
 import { useAuth } from '../../context/AuthContext';
 import apiService from '../../services/api';
 import { ContratoService } from '../../services/Logistico/Logistico';
+import { obtenerMonedaPorPais, obtenerNombreMonedaPorPais, obtenerSimboloMonedaPorPais } from '../../utils/monedaPorPais';
 
 interface TarifaForm {
   tarifario_id: number;
@@ -74,6 +75,7 @@ const ContratoForm: React.FC = () => {
   const [formData, setFormData] = useState({
     numero_contrato: '',
     cliente_id:      0,
+    moneda_id:       1, // 1 = QUETZAL por defecto
     fecha_inicio:    '',
     fecha_fin:       '',
     limite_credito:  0,
@@ -96,12 +98,64 @@ const ContratoForm: React.FC = () => {
   });
 
   const [tipoRuta, setTipoRuta] = useState<'comun' | 'personalizada'>('comun');
+
+  // Función para obtener el código de moneda (GTQ, USD, HNL, SVC) según el moneda_id
+  const getCodigoMoneda = (monedaId: number): string => {
+    const monedasMap: Record<number, string> = {
+      1: 'GTQ',
+      2: 'USD',
+      6: 'HNL',
+      7: 'SVC'
+    };
+    return monedasMap[monedaId] || 'GTQ';
+  };
+
+  // Función para obtener el símbolo de la moneda según el moneda_id
+  const getSimboloMoneda = (monedaId: number): string => {
+    const simbolosMap: Record<number, string> = {
+      1: 'Q',
+      2: '$',
+      6: 'L',
+      7: '₡'
+    };
+    return simbolosMap[monedaId] || 'Q';
+  };
+
+  // Función para obtener las 2 monedas disponibles: la del país + USD
+  const getMonedasDisponibles = (): Array<{id: number, nombre: string, flag: string}> => {
+    if (!monedaRecomendada) {
+      return []; // Si no hay cliente, no hay opciones
+    }
+
+    const monedasInfo: Record<number, {nombre: string, flag: string}> = {
+      1: { nombre: 'Q - QUETZAL (GTQ) - Guatemala', flag: '🇬🇹' },
+      2: { nombre: '$ - DÓLAR (USD) - USA', flag: '🇺🇸' },
+      6: { nombre: 'L - LEMPIRA (HNL) - Honduras', flag: '🇭🇳' },
+      7: { nombre: '₡ - COLÓN (SVC) - El Salvador', flag: '🇸🇻' }
+    };
+
+    const monedaDelPais = monedasInfo[monedaRecomendada];
+    const usd = monedasInfo[2];
+
+    // Si moneda del país es USD, mostrar solo USD
+    if (monedaRecomendada === 2) {
+      return [{id: 2, nombre: usd.nombre, flag: usd.flag}];
+    }
+
+    // Mostrar moneda del país + USD
+    return [
+      {id: monedaRecomendada, nombre: monedaDelPais.nombre, flag: monedaDelPais.flag},
+      {id: 2, nombre: usd.nombre, flag: usd.flag}
+    ];
+  };
   const [rutaSeleccionada, setRutaSeleccionada] = useState<string>('');
 
   const [clientes, setClientes]               = useState<any[]>([]);
   const [loadingClientes, setLoadingClientes] = useState(false);
   const [loadingSubmit, setLoadingSubmit]     = useState(false);
   const [success, setSuccess]                 = useState<string | null>(null);
+  const [paisClienteSeleccionado, setPaisClienteSeleccionado] = useState<string | null>(null);
+  const [monedaRecomendada, setMonedaRecomendada] = useState<number | null>(null);
 
   const userName = user?.nombres && user?.apellidos
     ? `${user.nombres} ${user.apellidos}`
@@ -155,6 +209,7 @@ const ContratoForm: React.FC = () => {
       setFormData({
         numero_contrato: contrato.numero_contrato,
         cliente_id:      contrato.cliente_id,
+        moneda_id:       contrato.moneda_id || 1,
         fecha_inicio:    contrato.fecha_inicio.split('T')[0],
         fecha_fin:       contrato.fecha_fin.split('T')[0],
         limite_credito:  contrato.limite_credito,
@@ -184,11 +239,30 @@ const ContratoForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'cliente_id' || name === 'limite_credito' || name === 'plazo_pago'
+      [name]: name === 'cliente_id' || name === 'moneda_id' || name === 'limite_credito' || name === 'plazo_pago'
         ? Number(value) : value
     }));
+
+    // Lógica especial para cliente_id: auto-asignar moneda por país
+    if (name === 'cliente_id') {
+      const clienteSeleccionado = clientes.find(c => c.id === Number(value));
+      if (clienteSeleccionado) {
+        const pais = clienteSeleccionado.pais;
+        setPaisClienteSeleccionado(pais);
+        
+        const monedaAutomatica = obtenerMonedaPorPais(pais);
+        setMonedaRecomendada(monedaAutomatica);
+        
+        // Auto-asignar la moneda
+        setFormData(prev => ({
+          ...prev,
+          moneda_id: monedaAutomatica
+        }));
+      }
+    }
   };
 
   const handleTarifarioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -290,6 +364,7 @@ const ContratoForm: React.FC = () => {
       if (isEdit && id) {
         // Actualización del contrato base
         const payload = {
+          moneda_id:      formData.moneda_id,
           fecha_inicio:   formData.fecha_inicio,
           fecha_fin:      formData.fecha_fin,
           limite_credito: formData.limite_credito,
@@ -329,6 +404,7 @@ const ContratoForm: React.FC = () => {
         const payload = {
           numero_contrato: formData.numero_contrato,
           cliente_id:      formData.cliente_id,
+          moneda_id:       formData.moneda_id,
           fecha_inicio:    formData.fecha_inicio,
           fecha_fin:       formData.fecha_fin,
           limite_credito:  formData.limite_credito,
@@ -463,6 +539,58 @@ const ContratoForm: React.FC = () => {
               </div>
 
               <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Moneda del Contrato (Pactada) *</label>
+                
+                {/* Moneda Sugerida por País */}
+                {paisClienteSeleccionado && monedaRecomendada && (
+                  <div className="mb-3 p-3 bg-blue-50 border-l-4 border-blue-500 rounded flex items-start gap-3">
+                    <FaLightbulb className="text-blue-600 text-lg mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">Moneda Sugerida por País</p>
+                      <p className="text-xs text-blue-700">
+                        País: <span className="font-bold">{paisClienteSeleccionado}</span> 
+                        {' '} → {' '}
+                        <span className="font-bold text-blue-900">
+                          {obtenerSimboloMonedaPorPais(paisClienteSeleccionado)} {obtenerNombreMonedaPorPais(paisClienteSeleccionado)}
+                        </span>
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">Puedes cambiarla si es necesario</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Selector de Moneda - Dinámico (moneda del país + USD) */}
+                <select
+                  name="moneda_id"
+                  value={formData.moneda_id}
+                  onChange={handleChange}
+                  disabled={!formData.cliente_id}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-600 focus:border-orange-600 bg-white transition-all hover:border-orange-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  {!formData.cliente_id ? (
+                    <option value={0}>Primero selecciona un cliente...</option>
+                  ) : getMonedasDisponibles().length === 0 ? (
+                    <option value={0}>Cargando monedas...</option>
+                  ) : (
+                    <>
+                      <option value={0}>Seleccione una moneda...</option>
+                      {getMonedasDisponibles().map(moneda => (
+                        <option key={moneda.id} value={moneda.id}>
+                          {moneda.flag} {moneda.nombre}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {!formData.cliente_id
+                    ? 'Selecciona un cliente para ver sus monedas disponibles'
+                    : `Moneda recomendada para ${paisClienteSeleccionado}: ${getMonedasDisponibles()[0]?.nombre || 'GTQ'}`}
+                </p>
+              </div>
+
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Fecha de Inicio *</label>
                 <input
                   type="date" name="fecha_inicio" value={formData.fecha_inicio}
@@ -481,12 +609,23 @@ const ContratoForm: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Límite de Crédito (GTQ) *</label>
-                <input
-                  type="number" name="limite_credito" value={formData.limite_credito}
-                  onChange={handleChange} required step="0.01"
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-600 focus:border-orange-600 transition-all hover:border-orange-300"
-                />
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Límite de Crédito ({obtenerSimboloMonedaPorPais(paisClienteSeleccionado)}) *
+                </label>
+                <div className="flex gap-2">
+                  <div className="flex items-center justify-center px-4 py-3 bg-gray-100 rounded-lg border-2 border-gray-300 text-gray-700 font-bold min-w-fit">
+                    {obtenerSimboloMonedaPorPais(paisClienteSeleccionado)}
+                  </div>
+                  <input
+                    type="number" name="limite_credito" value={formData.limite_credito}
+                    onChange={handleChange} required step="0.01"
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-600 focus:border-orange-600 transition-all hover:border-orange-300"
+                    placeholder="0.00"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  En moneda: <span className="font-bold">{obtenerNombreMonedaPorPais(paisClienteSeleccionado)}</span>
+                </p>
               </div>
 
               <div>
@@ -532,7 +671,7 @@ const ContratoForm: React.FC = () => {
                   <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border-l-4 border-orange-500">
                     <div>
                       <span className="font-medium">{getTipoUnidadLabel(tarifa.tipo_unidad)}</span>
-                      <span className="text-gray-500 ml-2">{formatMoney(tarifa.costo_km_negociado)}/km</span>
+                      <span className="text-gray-500 ml-2">{getSimboloMoneda(formData.moneda_id)} {tarifa.costo_km_negociado.toFixed(2)}/km</span>
                       {tarifa.id && <span className="text-xs text-green-600 ml-2">(Existente)</span>}
                       {!tarifa.id && <span className="text-xs text-blue-600 ml-2">(Nueva)</span>}
                     </div>
@@ -558,13 +697,13 @@ const ContratoForm: React.FC = () => {
                     <option value="">Seleccionar</option>
                     {tarifarios.map(t => (
                       <option key={t.id} value={t.id}>
-                        {getTipoUnidadLabel(t.tipo_unidad)} - {formatMoney(t.costo_base_km)}/km (base)
+                        {getTipoUnidadLabel(t.tipo_unidad)} - {getSimboloMoneda(formData.moneda_id)} {t.costo_base_km.toFixed(2)}/km (base)
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Costo negociado por km (GTQ) *</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">Costo negociado por km ({getCodigoMoneda(formData.moneda_id)}) *</label>
                   <input
                     type="number" value={isNaN(nuevaTarifa.costo_km_negociado) ? '' : nuevaTarifa.costo_km_negociado}
                     onChange={(e) => setNuevaTarifa({ ...nuevaTarifa, costo_km_negociado: parseFloat(e.target.value) || 0 })}
@@ -757,7 +896,7 @@ const ContratoForm: React.FC = () => {
                   <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border-l-4 border-green-500">
                     <div>
                       <span className="font-medium">{getTipoUnidadLabel(descuento.tipo_unidad)}</span>
-                      <span className="text-gray-500 ml-2">{descuento.porcentaje_descuento}%</span>
+                      <span className="text-gray-500 ml-2">{getSimboloMoneda(formData.moneda_id)} {descuento.porcentaje_descuento}% desc.</span>
                       {descuento.observacion && <span className="text-gray-400 ml-2">- {descuento.observacion}</span>}
                       {descuento.id && <span className="text-xs text-green-600 ml-2">(Existente)</span>}
                       {!descuento.id && <span className="text-xs text-blue-600 ml-2">(Nuevo)</span>}

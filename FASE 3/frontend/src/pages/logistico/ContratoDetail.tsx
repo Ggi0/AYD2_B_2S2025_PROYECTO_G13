@@ -57,6 +57,28 @@ const ContratoDetail: React.FC = () => {
   const saldoUsado = contratoActual.saldo_usado || 0;
   const creditoDisponible = contratoActual.limite_credito - saldoUsado;
 
+  // Función para obtener el símbolo de la moneda según el moneda_id
+  const getSimboloMoneda = (monedaId?: number): string => {
+    const simbolosMap: Record<number, string> = {
+      1: 'Q',    // GTQ
+      2: '$',    // USD
+      6: 'L',    // HNL
+      7: '₡'     // SVC
+    };
+    return monedaId ? (simbolosMap[monedaId] || 'Q') : (contratoActual.simbolo_moneda || 'Q');
+  };
+
+  // Función para obtener el nombre de la moneda según el moneda_id
+  const getNombreMoneda = (monedaId?: number): string => {
+    const monedasMap: Record<number, string> = {
+      1: 'GTQ',    // Quetzal Guatemalteco
+      2: 'USD',    // Dólar Estadounidense
+      6: 'HNL',    // Lempira Hondureño
+      7: 'SVC'     // Colón Salvadoreño
+    };
+    return monedaId ? (monedasMap[monedaId] || 'GTQ') : (contratoActual.nombre_moneda || 'GTQ');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
       <LogisticHeader 
@@ -147,25 +169,26 @@ const ContratoDetail: React.FC = () => {
           <div className="flex items-center mb-8 pb-4 border-b-2 border-orange-100">
             <FaDollarSign className="text-3xl mr-3 text-orange-600" />
             <h2 className="text-2xl font-bold text-gray-900">Crédito Disponible</h2>
+            <span className="ml-4 text-sm text-gray-500">({getNombreMoneda(contratoActual.moneda_id)})</span>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Límite */}
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
               <p className="text-sm font-bold text-blue-600 mb-2">Límite de Crédito</p>
-              <p className="text-3xl font-bold text-blue-900">{formatMoney(contratoActual.limite_credito)}</p>
+              <p className="text-3xl font-bold text-blue-900">{formatMoney(contratoActual.limite_credito, getNombreMoneda(contratoActual.moneda_id))}</p>
             </div>
             
             {/* Usado */}
             <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
               <p className="text-sm font-bold text-yellow-600 mb-2">Saldo Usado</p>
-              <p className="text-3xl font-bold text-yellow-900">{formatMoney(saldoUsado)}</p>
+              <p className="text-3xl font-bold text-yellow-900">{formatMoney(saldoUsado, getNombreMoneda(contratoActual.moneda_id))}</p>
             </div>
             
             {/* Disponible */}
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
               <p className="text-sm font-bold text-green-600 mb-2">Crédito Disponible</p>
-              <p className="text-3xl font-bold text-green-900">{formatMoney(creditoDisponible)}</p>
+              <p className="text-3xl font-bold text-green-900">{formatMoney(creditoDisponible, getNombreMoneda(contratoActual.moneda_id))}</p>
             </div>
           </div>
 
@@ -190,6 +213,7 @@ const ContratoDetail: React.FC = () => {
           <div className="flex items-center mb-6 pb-4 border-b-2 border-blue-100">
             <FaDollarSign className="text-3xl mr-3 text-blue-600" />
             <h2 className="text-2xl font-bold text-gray-900">Tarifas Negociadas</h2>
+            <span className="ml-4 text-sm text-gray-500">({getNombreMoneda(contratoActual.moneda_id)})</span>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full">
@@ -203,7 +227,9 @@ const ContratoDetail: React.FC = () => {
                 {contratoActual.tarifas?.map((tarifa: TarifaNegociada, idx: number) => (
                   <tr key={idx} className="border-t hover:bg-gray-50 transition">
                     <td className="px-6 py-3 text-sm text-gray-900 font-medium">{tarifa.tipo_unidad}</td>
-                    <td className="px-6 py-3 text-sm font-bold text-blue-600">{formatMoney(tarifa.costo_km_negociado)}/km</td>
+                    <td className="px-6 py-3 text-sm font-bold text-blue-600">
+                      {getSimboloMoneda(contratoActual.moneda_id)} {tarifa.costo_km_negociado.toFixed(2)}/km
+                    </td>
                   </tr>
                 ))}
                 {(!contratoActual.tarifas || contratoActual.tarifas.length === 0) && (

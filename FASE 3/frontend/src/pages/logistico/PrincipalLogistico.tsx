@@ -399,11 +399,11 @@ const PrincipalLogistico: React.FC = () => {
                               <div className="text-xs text-gray-400">{formatDate(contrato.fecha_fin)}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {formatMoney(contrato.limite_credito)}
+                              {formatMoney(contrato.limite_credito, contrato.nombre_moneda || 'GTQ')}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="text-sm font-semibold text-green-600">
-                                {formatMoney(creditoDisponible)}
+                                {formatMoney(creditoDisponible, contrato.nombre_moneda || 'GTQ')}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -476,8 +476,8 @@ const PrincipalLogistico: React.FC = () => {
                               <div className="text-xs text-gray-400">{formatDate(contrato.fecha_fin)}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">{formatMoney(contrato.limite_credito)}</div>
-                              <div className="text-xs text-gray-500">Usado: {formatMoney(contrato.saldo_usado || 0)}</div>
+                              <div className="text-sm font-medium text-gray-900">{formatMoney(contrato.limite_credito, contrato.nombre_moneda || 'GTQ')}</div>
+                              <div className="text-xs text-gray-500">Usado: {formatMoney(contrato.saldo_usado || 0, contrato.nombre_moneda || 'GTQ')}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-3 py-1 text-xs font-semibold rounded-full ${estadoInfo.bg} ${estadoInfo.color}`}>

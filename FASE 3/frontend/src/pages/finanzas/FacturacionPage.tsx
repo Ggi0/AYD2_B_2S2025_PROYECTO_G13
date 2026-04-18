@@ -7,6 +7,7 @@ import FinanzasMenu from "../../components/finanzas/FinanzasMenu";
 import FacturaBadge from "../../components/finanzas/FacturaBadge";
 import FacturaModal from "../../components/finanzas/FacturaModal";
 import PagoModal from "../../components/finanzas/PagoModal";
+import { useMonedas } from "../../services/monedas/hooks/useMonedas";
 import {
   getFacturas,
   validarFactura,
@@ -27,6 +28,7 @@ const fmtDate = (s?: string) => (s ? new Date(s).toLocaleDateString("es-GT") : "
 
 const FacturacionPage: React.FC = () => {
   const navigate = useNavigate();
+  const { obtenerSimboloMoneda } = useMonedas();
 
   /* ── Estado ── */
   const [facturas,    setFacturas]    = useState<Factura[]>([]);

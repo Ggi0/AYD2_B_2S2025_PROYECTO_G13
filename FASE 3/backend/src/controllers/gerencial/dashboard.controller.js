@@ -8,6 +8,7 @@ async function getCorteDiario(req, res) {
     const data = await dashboardService.getCorteDiario({
       fecha: req.query.fecha,
       sede: req.query.sede,
+      moneda_id: req.query.moneda_id ? Number(req.query.moneda_id) : null,
     });
 
     return res.status(200).json({
@@ -30,6 +31,7 @@ async function getKpis(req, res) {
       desde: req.query.desde,
       hasta: req.query.hasta,
       sede: req.query.sede,
+      moneda_id: req.query.moneda_id ? Number(req.query.moneda_id) : null,
     });
 
     return res.status(200).json({

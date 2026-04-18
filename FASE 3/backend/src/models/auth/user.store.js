@@ -100,6 +100,7 @@ async function findByEmail(email) {
 }
 
 async function createUser(payload) {
+    console.log('[createUser] payload recibido:', payload);
   const fullName = `${payload.nombres || ""} ${payload.apellidos || ""}`.trim();
   const nombre = fullName || String(payload.nombres || "Usuario").trim();
   const dbRole = mapAppRoleToDb(payload.role);
@@ -115,6 +116,7 @@ async function createUser(payload) {
     .input("nombre", sql.NVarChar(255), nombre)
     .input("email", sql.NVarChar(255), String(payload.email || "").toLowerCase())
     .input("telefono", sql.NVarChar(20), payload.telefono || null)
+    .input("pais", sql.NVarChar(100), payload.pais || null)
     .input("password_hash", sql.NVarChar(255), payload.passwordHash)
     .input("tipo_usuario", sql.NVarChar(30), dbRole)
     .input("estado", sql.NVarChar(20), estadoInicial)
@@ -124,6 +126,7 @@ async function createUser(payload) {
         nombre,
         email,
         telefono,
+        pais,
         password_hash,
         tipo_usuario,
         estado,
@@ -135,6 +138,7 @@ async function createUser(payload) {
         INSERTED.nombre,
         INSERTED.email,
         INSERTED.telefono,
+        INSERTED.pais,
         INSERTED.password_hash,
         INSERTED.tipo_usuario,
         INSERTED.estado,
@@ -144,6 +148,7 @@ async function createUser(payload) {
         @nombre,
         @email,
         @telefono,
+        @pais,
         @password_hash,
         @tipo_usuario,
         @estado,

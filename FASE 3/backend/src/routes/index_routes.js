@@ -12,7 +12,7 @@
  * @requires express
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
 /**
@@ -20,45 +20,44 @@ const router = express.Router();
  * @description Verifica que la API está operativa
  * @response {status: 200, ok: true, mensaje: 'Dentro de la API'}
  */
-router.get('/', (req, res) => {
-    res.status(200).json({
-      ok: true,
-      mensaje: 'Dentro de la API'
-    });
+router.get("/", (req, res) => {
+  res.status(200).json({
+    ok: true,
+    mensaje: "Dentro de la API calificacion",
+  });
 });
 
 // Importar rutas por módulo
 const facturacionRoutes = require("./facturacion/routes_factuacion");
 const authRoutes = require("./auth/auth.routes");
 const ordenRoutes = require("./orden/orden.routes");
-const finanzasTarifarioRoutas = require("./facturacion/routes_finanzas_tarifario")
+const finanzasTarifarioRoutas = require("./facturacion/routes_finanzas_tarifario");
 
 // otras carpetas por ejemplo:
 // const contratosRoutes = require('./contratos/routes_contratos');
 
+const usuarioRoutes = require("./usuarios/usuarioRoutes");
+const contratoRoutes = require("./contratos/contratoRoutes");
+const tarifarioRoutes = require("./tarifario/tarifarioRoutes");
+const notificacionesRoutes = require("./notificaciones/notificacionesRoutes");
+const monedaRoutes = require("./monedas/monedaRoutes");
 
-const usuarioRoutes        = require('./usuarios/usuarioRoutes');
-const contratoRoutes       = require('./contratos/contratoRoutes');
-const tarifarioRoutes      = require('./tarifario/tarifarioRoutes');
-const notificacionesRoutes = require('./notificaciones/notificacionesRoutes');
-const monedaRoutes         = require('./monedas/monedaRoutes');
-
-const gerencialRoutes = require('./gerencial/dashboard.routes');
+const gerencialRoutes = require("./gerencial/dashboard.routes");
 
 // Convención general:
-router.use('/orden', ordenRoutes);
+router.use("/orden", ordenRoutes);
 // /api/modulo
-router.use('/facturacion', facturacionRoutes);
-router.use('/auth', authRoutes);
-router.use('/usuarios',    usuarioRoutes);
-router.use('/contratos',   contratoRoutes);
-router.use('/tarifario',   tarifarioRoutes);
-router.use('/notificaciones', notificacionesRoutes);
-router.use('/monedas',     monedaRoutes);
-router.use('/gerencial',   gerencialRoutes);
+router.use("/facturacion", facturacionRoutes);
+router.use("/auth", authRoutes);
+router.use("/usuarios", usuarioRoutes);
+router.use("/contratos", contratoRoutes);
+router.use("/tarifario", tarifarioRoutes);
+router.use("/notificaciones", notificacionesRoutes);
+router.use("/monedas", monedaRoutes);
+router.use("/gerencial", gerencialRoutes);
 router.use("/orden", ordenRoutes);
 
-router.use('/finanzas/tarifario', tarifarioRoutes);
+router.use("/finanzas/tarifario", tarifarioRoutes);
 //  /api/contratos
 //  router.use('/contratos', contratosRoutes);
 

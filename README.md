@@ -9,7 +9,6 @@
 - Gonzalo Fernando Pérez Cazún 202211515
 - Jens Jeremy Pablo Sosof 202102771
 
-
-primer release fase 3 
+primer release fase 3
 
 segundo release fase 3

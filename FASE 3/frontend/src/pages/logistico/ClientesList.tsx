@@ -21,7 +21,7 @@ import LogisticMenu from '../../components/logistico/LogisticMenu';
 import { useClientes, type Cliente } from '../../services/Logistico/hooks/useClientes';
 import { useValidarCliente } from '../../services/Logistico/hooks/useValidarCliente';
 import { useRiesgo, type RiesgoCliente } from '../../services/Logistico/hooks/useRiesgo';
-import { formatDate } from '../../services/Logistico/Logistico';
+import { formatDate, formatMoney } from '../../services/Logistico/Logistico';
 
 interface FilterOptions {
   searchTerm: string;
@@ -57,6 +57,7 @@ const ClientesList: React.FC = () => {
     email: '',
     nit: '',
     telefono: '',
+    pais: '',
     tipo_usuario: 'CLIENTE_CORPORATIVO',
     estado: 'ACTIVO',
     password: '',
@@ -207,6 +208,7 @@ const ClientesList: React.FC = () => {
         email: '',
         nit: '',
         telefono: '',
+        pais: '',
         tipo_usuario: 'CLIENTE_CORPORATIVO',
         estado: 'ACTIVO',
         password: '',
@@ -587,6 +589,9 @@ const ClientesList: React.FC = () => {
                           NIT
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
+                          País
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
                           Estado
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">
@@ -625,6 +630,11 @@ const ClientesList: React.FC = () => {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm font-mono text-gray-600">{cliente.nit}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
+                              {cliente.pais || 'No registrado'}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {getEstadoBadge(cliente.estado)}
@@ -1034,6 +1044,22 @@ const ClientesList: React.FC = () => {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  País
+                </label>
+                <select
+                  value={editingCliente.pais || ''}
+                  onChange={(e) => handleEditChange('pais', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Selecciona un país</option>
+                  <option value="Guatemala">Guatemala</option>
+                  <option value="El Salvador">El Salvador</option>
+                  <option value="Honduras">Honduras</option>
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1204,8 +1230,8 @@ const ClientesList: React.FC = () => {
                           const estaBloqueado = contrato.saldo_usado >= contrato.limite_credito;
                           return (
                             <div key={idx} className="border-l-4 border-blue-500 bg-white rounded-lg p-4 shadow-sm">
-                              {/* Fila 1: Número, Vencimiento, Plazo */}
-                              <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-gray-200">
+                              {/* Fila 1: Número, Vencimiento, Plazo, Moneda */}
+                              <div className="grid grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-200">
                                 <div>
                                   <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">Número</p>
                                   <p className="text-lg font-mono font-bold text-blue-900 break-all">{contrato.numero_contrato}</p>
@@ -1225,6 +1251,13 @@ const ClientesList: React.FC = () => {
                                     <span className="text-xs text-gray-600">días</span>
                                   </div>
                                 </div>
+                                <div>
+                                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">Moneda</p>
+                                  <div className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-bold bg-purple-200 text-purple-800">
+                                    <FaDollarSign className="h-4 w-4" />
+                                    <span>{contrato.simbolo_moneda || contrato.nombre_moneda || 'Q'}</span>
+                                  </div>
+                                </div>
                               </div>
 
                               {/* Fila 2: Crédito individual */}
@@ -1232,15 +1265,15 @@ const ClientesList: React.FC = () => {
                                 <div className="grid grid-cols-3 gap-3 text-sm mb-3">
                                   <div>
                                     <p className="text-blue-600 text-xs font-semibold">LÍMITE</p>
-                                    <p className="text-lg font-bold text-blue-900">Q{contrato.limite_credito?.toLocaleString('es-GT')}</p>
+                                    <p className="text-lg font-bold text-blue-900">{formatMoney(contrato.limite_credito, contrato.nombre_moneda || 'GTQ')}</p>
                                   </div>
                                   <div>
                                     <p className="text-red-600 text-xs font-semibold">UTILIZADO</p>
-                                    <p className="text-lg font-bold text-red-700">Q{contrato.saldo_usado?.toLocaleString('es-GT')}</p>
+                                    <p className="text-lg font-bold text-red-700">{formatMoney(contrato.saldo_usado, contrato.nombre_moneda || 'GTQ')}</p>
                                   </div>
                                   <div>
                                     <p className="text-green-600 text-xs font-semibold">DISPONIBLE</p>
-                                    <p className="text-lg font-bold text-green-700">Q{contrato.saldo_disponible?.toLocaleString('es-GT')}</p>
+                                    <p className="text-lg font-bold text-green-700">{formatMoney(contrato.saldo_disponible || (contrato.limite_credito - contrato.saldo_usado), contrato.nombre_moneda || 'GTQ')}</p>
                                   </div>
                                 </div>
                                 
@@ -1276,8 +1309,8 @@ const ClientesList: React.FC = () => {
                     ) : validacion.contrato ? (
                       // Fallback si solo hay un contrato
                       <div className="border-l-4 border-blue-500 bg-white rounded-lg p-4 shadow-sm">
-                        {/* Fila 1: Número, Vencimiento, Plazo */}
-                        <div className="grid grid-cols-3 gap-4 mb-4 pb-4 border-b border-gray-200">
+                        {/* Fila 1: Número, Vencimiento, Plazo, Moneda */}
+                        <div className="grid grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-200">
                           <div>
                             <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">Número</p>
                             <p className="text-lg font-mono font-bold text-blue-900 break-all">{validacion.contrato.numero_contrato}</p>
@@ -1297,6 +1330,13 @@ const ClientesList: React.FC = () => {
                               <span className="text-xs text-gray-600">días</span>
                             </div>
                           </div>
+                          <div>
+                            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">Moneda</p>
+                            <div className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm font-bold bg-purple-200 text-purple-800">
+                              <FaDollarSign className="h-4 w-4" />
+                              <span>{(validacion.contrato as any).simbolo_moneda || (validacion.contrato as any).nombre_moneda || 'Q'}</span>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Fila 2: Crédito individual */}
@@ -1304,15 +1344,15 @@ const ClientesList: React.FC = () => {
                           <div className="grid grid-cols-3 gap-3 text-sm mb-3">
                             <div>
                               <p className="text-blue-600 text-xs font-semibold">LÍMITE</p>
-                              <p className="text-lg font-bold text-blue-900">Q{validacion.contrato.limite_credito?.toLocaleString('es-GT')}</p>
+                              <p className="text-lg font-bold text-blue-900">{formatMoney(validacion.contrato.limite_credito, validacion.contrato.nombre_moneda || 'GTQ')}</p>
                             </div>
                             <div>
                               <p className="text-red-600 text-xs font-semibold">UTILIZADO</p>
-                              <p className="text-lg font-bold text-red-700">Q{validacion.contrato.saldo_usado?.toLocaleString('es-GT')}</p>
+                              <p className="text-lg font-bold text-red-700">{formatMoney(validacion.contrato.saldo_usado, validacion.contrato.nombre_moneda || 'GTQ')}</p>
                             </div>
                             <div>
                               <p className="text-green-600 text-xs font-semibold">DISPONIBLE</p>
-                              <p className="text-lg font-bold text-green-700">Q{validacion.contrato.saldo_disponible?.toLocaleString('es-GT')}</p>
+                              <p className="text-lg font-bold text-green-700">{formatMoney(validacion.contrato.saldo_disponible || (validacion.contrato.limite_credito - validacion.contrato.saldo_usado), validacion.contrato.nombre_moneda || 'GTQ')}</p>
                             </div>
                           </div>
                           
@@ -1543,6 +1583,22 @@ const ClientesList: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    País
+                  </label>
+                  <select
+                    value={newCliente.pais || ''}
+                    onChange={(e) => handleCreateChange('pais', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Selecciona un país</option>
+                    <option value="Guatemala">Guatemala</option>
+                    <option value="El Salvador">El Salvador</option>
+                    <option value="Honduras">Honduras</option>
+                  </select>
                 </div>
 
                 <div>

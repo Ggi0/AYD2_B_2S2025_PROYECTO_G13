@@ -28,7 +28,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # Dependencias y lock files (opcional - algunos prefieren subirlos)
-package-lock.json
 yarn.lock
 pnpm-lock.yaml
 

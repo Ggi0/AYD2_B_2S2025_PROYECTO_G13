@@ -53,9 +53,10 @@ function buildSedeCaseForOrders(alias) {
 }
 
 // 1) Corte diario: operaciones + facturación consolidada por sede.
-async function getCorteDiario({ fecha, sede }) {
+async function getCorteDiario({ fecha, sede, moneda_id }) {
   const selectedDate = parseDateInput(fecha);
   const selectedSede = normalizeSede(sede);
+  const selectedMoneda = moneda_id ? Number(moneda_id) : null;
 
   const pool = await getConnection();
 
@@ -75,14 +76,17 @@ async function getCorteDiario({ fecha, sede }) {
     GROUP BY ${sedeCaseOrders}
   `;
 
-  // Facturación del día, enlazada con orden para obtener sede.
+  // Facturación del día con conversión de moneda, enlazada con orden para obtener sede y moneda.
   const invoicesQuery = `
     SELECT
       ${sedeCaseInvoices} AS sede,
       COUNT(*) AS total_facturas,
-      SUM(ISNULL(f.total_factura, 0)) AS total_facturado
+      SUM(ISNULL(f.total_factura, 0) * (ISNULL(m_origen.cambio, 1.0) / ISNULL(m_dest.cambio, 1.0))) AS total_facturado
     FROM facturas_fel f
     INNER JOIN ordenes o ON o.id = f.orden_id
+    INNER JOIN contratos c ON c.id = o.contrato_id
+    INNER JOIN monedas m_origen ON m_origen.id = c.moneda_id
+    INNER JOIN monedas m_dest ON m_dest.id = ISNULL(@moneda_id, 1)
     WHERE CAST(f.fecha_emision AS DATE) = @fecha
     GROUP BY ${sedeCaseInvoices}
   `;
@@ -95,6 +99,7 @@ async function getCorteDiario({ fecha, sede }) {
   const invoicesResult = await pool
     .request()
     .input("fecha", sql.Date, selectedDate)
+    .input("moneda_id", sql.Int, selectedMoneda)
     .query(invoicesQuery);
 
   // Se combinan ambas consultas en una sola estructura por sede.
@@ -154,27 +159,33 @@ async function getCorteDiario({ fecha, sede }) {
   };
 }
 
-// 2) KPIs: rentabilidad y cumplimiento por rango de fechas y sede.
-async function getKpis({ desde, hasta, sede }) {
+// 2) KPIs: rentabilidad y cumplimiento por rango de fechas, sede y moneda.
+async function getKpis({ desde, hasta, sede, moneda_id }) {
   const startDate = parseDateInput(desde);
   const endDate = parseDateInput(hasta || desde || new Date());
   const selectedSede = normalizeSede(sede);
+  const selectedMoneda = moneda_id ? Number(moneda_id) : null;
 
   const pool = await getConnection();
 
   const sedeCase = buildSedeCaseForOrders("o");
 
-  // Se usan ordenes + facturas_fel + orden_kpi para métricas financieras y operativas.
+  // Se usan ordenes + facturas_fel + orden_kpi + contratos + monedas para métricas con conversión de moneda.
   const kpiQuery = `
     WITH base AS (
       SELECT
         ${sedeCase} AS sede,
-        ISNULL(f.ingreso_total, 0) AS ingreso,
-        ISNULL(o.costo, 0) AS costo,
+        -- Conversión de ingresos a la moneda seleccionada
+        ISNULL(f.ingreso_total, 0) * (ISNULL(m_origen.cambio, 1.0) / ISNULL(m_dest.cambio, 1.0)) AS ingreso,
+        -- Conversión de costos a la moneda seleccionada
+        ISNULL(o.costo, 0) * (ISNULL(m_origen.cambio, 1.0) / ISNULL(m_dest.cambio, 1.0)) AS costo,
         ISNULL(o.tiempo_estimado, ISNULL(k.tiempo_planificado, 0)) AS tiempo_pactado,
         ISNULL(k.tiempo_real, 0) AS tiempo_real,
         ISNULL(k.retraso, 0) AS retraso
       FROM ordenes o
+      INNER JOIN contratos c ON c.id = o.contrato_id
+      INNER JOIN monedas m_origen ON m_origen.id = c.moneda_id
+      INNER JOIN monedas m_dest ON m_dest.id = ISNULL(@moneda_id, 1)
       LEFT JOIN (
         SELECT orden_id, SUM(ISNULL(total_factura, 0)) AS ingreso_total
         FROM facturas_fel
@@ -202,6 +213,7 @@ async function getKpis({ desde, hasta, sede }) {
     .request()
     .input("desde", sql.Date, startDate)
     .input("hasta", sql.Date, endDate)
+    .input("moneda_id", sql.Int, selectedMoneda)
     .query(kpiQuery);
 
   let rows = result.recordset.filter((row) => row.sede !== "OTRA");

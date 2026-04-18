@@ -41,6 +41,7 @@ const usuarioRoutes        = require('./usuarios/usuarioRoutes');
 const contratoRoutes       = require('./contratos/contratoRoutes');
 const tarifarioRoutes      = require('./tarifario/tarifarioRoutes');
 const notificacionesRoutes = require('./notificaciones/notificacionesRoutes');
+const monedaRoutes         = require('./monedas/monedaRoutes');
 
 const gerencialRoutes = require('./gerencial/dashboard.routes');
 
@@ -53,6 +54,7 @@ router.use('/usuarios',    usuarioRoutes);
 router.use('/contratos',   contratoRoutes);
 router.use('/tarifario',   tarifarioRoutes);
 router.use('/notificaciones', notificacionesRoutes);
+router.use('/monedas',     monedaRoutes);
 router.use('/gerencial',   gerencialRoutes);
 router.use("/orden", ordenRoutes);
 

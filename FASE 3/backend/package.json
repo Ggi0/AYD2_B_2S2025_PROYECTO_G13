@@ -4,7 +4,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run test:unit",
+    "test:unit": "mocha tests/pruebas_unitarias/**/*.test.js --exit",
+    "test:int": "mocha tests/pruebas_integracion/**/*.test.js --timeout 10000 --exit",
+    "test:all": "mocha tests/**/*.test.js --exit"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +16,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
+    "chai": "^6.2.2",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -21,5 +25,12 @@
     "multer": "^2.1.1",
     "nodemailer": "^8.0.3",
     "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "diff": "^3.5.1",
+    "mocha": "^11.3.0",
+    "serialize-javascript": "^7.0.5",
+    "sinon": "^21.1.2",
+    "supertest": "^7.2.2"
   }
 }

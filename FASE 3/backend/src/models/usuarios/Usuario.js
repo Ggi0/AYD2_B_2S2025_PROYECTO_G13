@@ -34,7 +34,7 @@ const buscarPorId = async (id) => {
     .input('id', sql.Int, id)
     .query(`
       SELECT 
-        u.id, u.nit, u.nombre, u.email, u.telefono,
+        u.id, u.nit, u.nombre, u.email, u.telefono, u.pais,
         u.tipo_usuario, u.estado, u.fecha_registro,
         c.nombre AS creado_por_nombre
       FROM usuarios u
@@ -73,7 +73,7 @@ const listarUsuarios = async (filtros = {}) => {
   const request = pool.request();
 
   let query = `
-    SELECT id, nit, nombre, email, telefono,
+    SELECT id, nit, nombre, email, telefono, pais,
            tipo_usuario, estado, fecha_registro
     FROM usuarios
     WHERE 1=1
@@ -115,16 +115,17 @@ const listarUsuarios = async (filtros = {}) => {
  * });
  */
 const actualizarUsuario = async (id, datos) => {
-  const { nombre, email, telefono } = datos;
+  const { nombre, email, telefono, pais } = datos;
   const pool = await getConnection();
   const result = await pool.request()
     .input('id',       sql.Int,      id)
     .input('nombre',   sql.NVarChar, nombre)
     .input('email',    sql.NVarChar, email)
     .input('telefono', sql.NVarChar, telefono)
+    .input('pais',     sql.NVarChar, pais)
     .query(`
       UPDATE usuarios
-      SET nombre = @nombre, email = @email, telefono = @telefono
+      SET nombre = @nombre, email = @email, telefono = @telefono, pais = @pais
       OUTPUT INSERTED.*
       WHERE id = @id
     `);
@@ -251,6 +252,7 @@ const buscarPorEmail = async (email) => {
  * @param {string} datos.nombre - Nombre completo
  * @param {string} datos.email - Email único
  * @param {string} datos.telefono - Teléfono (opcional)
+ * @param {string} datos.pais - País (opcional)
  * @param {string} datos.tipo_usuario - Tipo (CLIENTE_CORPORATIVO, PILOTO, etc)
  * @param {string} datos.estado - Estado inicial (ACTIVO, PENDIENTE_ACEPTACION, etc)
  * @param {string} datos.password_hash - Contraseña hasheada
@@ -264,15 +266,16 @@ const crearCliente = async (datos) => {
     .input('nombre',        sql.NVarChar, datos.nombre)
     .input('email',         sql.NVarChar, datos.email)
     .input('telefono',      sql.NVarChar, datos.telefono || null)
+    .input('pais',          sql.NVarChar, datos.pais || null)
     .input('tipo_usuario',  sql.NVarChar, datos.tipo_usuario)
     .input('estado',        sql.NVarChar, datos.estado)
     .input('password_hash', sql.NVarChar, datos.password_hash)
     .input('creado_por',    sql.Int,      datos.creado_por || null)
     .query(`
-      INSERT INTO usuarios (nit, nombre, email, telefono, password_hash, tipo_usuario, estado, creado_por)
-      OUTPUT INSERTED.id, INSERTED.nit, INSERTED.nombre, INSERTED.email, INSERTED.telefono,
+      INSERT INTO usuarios (nit, nombre, email, telefono, pais, password_hash, tipo_usuario, estado, creado_por)
+      OUTPUT INSERTED.id, INSERTED.nit, INSERTED.nombre, INSERTED.email, INSERTED.telefono, INSERTED.pais,
              INSERTED.tipo_usuario, INSERTED.estado, INSERTED.fecha_registro
-      VALUES (@nit, @nombre, @email, @telefono, @password_hash, @tipo_usuario, @estado, @creado_por)
+      VALUES (@nit, @nombre, @email, @telefono, @pais, @password_hash, @tipo_usuario, @estado, @creado_por)
     `);
   return result.recordset[0];
 };

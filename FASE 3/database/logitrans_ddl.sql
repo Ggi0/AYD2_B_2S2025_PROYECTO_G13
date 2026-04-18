@@ -4,6 +4,7 @@ CREATE TABLE usuarios (
     nombre NVARCHAR(255) NOT NULL,
     email NVARCHAR(255) NOT NULL UNIQUE,
     telefono NVARCHAR(20) NULL,
+    pais NVARCHAR(100) NULL,
     password_hash NVARCHAR(255) NOT NULL,
     tipo_usuario NVARCHAR(30) NOT NULL CHECK (tipo_usuario IN ('CLIENTE_CORPORATIVO','AGENTE_OPERATIVO','AGENTE_LOGISTICO','AGENTE_FINANCIERO','ENCARGADO_PATIO','AREA_CONTABLE','GERENCIA','PILOTO')),
     estado NVARCHAR(20) NOT NULL DEFAULT 'ACTIVO' CHECK (estado IN ('PENDIENTE_ACEPTACION','ACTIVO','INACTIVO','BLOQUEADO')),
@@ -47,21 +48,32 @@ CREATE TABLE vehiculos (
     CONSTRAINT FK_vehiculos_creado_por FOREIGN KEY (creado_por) REFERENCES usuarios(id)
 );
 
+CREATE TABLE monedas (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nombre NVARCHAR(50) NOT NULL UNIQUE,
+    simbolo NVARCHAR(5) NOT NULL,
+    cambio DECIMAL(10,4) NOT NULL DEFAULT 1.0000
+);
+
 CREATE TABLE contratos (
     id INT IDENTITY(1,1) PRIMARY KEY,
     numero_contrato NVARCHAR(50) NOT NULL UNIQUE,
     cliente_id INT NOT NULL,
+    moneda_id INT NOT NULL DEFAULT 1,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NOT NULL,
     estado NVARCHAR(15) NOT NULL DEFAULT 'VIGENTE' CHECK (estado IN ('VIGENTE','EXPIRADO','SUSPENDIDO')),
     limite_credito DECIMAL(15,2) NOT NULL,
+    limite_credito_q DECIMAL(15,2) NOT NULL DEFAULT 0,
     saldo_usado DECIMAL(15,2) NOT NULL DEFAULT 0,
+    saldo_usado_q DECIMAL(15,2) NOT NULL DEFAULT 0,
     plazo_pago INT NOT NULL CHECK (plazo_pago IN (15,30,45)),
     creado_por INT NOT NULL,
     fecha_creacion DATETIME2 NOT NULL DEFAULT GETDATE(),
     modificado_por INT NULL,
     fecha_modificacion DATETIME2 NULL,
     CONSTRAINT FK_contratos_cliente FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
+    CONSTRAINT FK_contratos_moneda FOREIGN KEY (moneda_id) REFERENCES monedas(id),
     CONSTRAINT FK_contratos_creado_por FOREIGN KEY (creado_por) REFERENCES usuarios(id),
     CONSTRAINT FK_contratos_modificado_por FOREIGN KEY (modificado_por) REFERENCES usuarios(id)
 );
@@ -193,6 +205,7 @@ CREATE TABLE facturas_fel (
     orden_id INT NOT NULL,
     cliente_id INT NOT NULL,
     contrato_id INT NOT NULL,
+    moneda_id INT NOT NULL DEFAULT 1,
     numero_factura NVARCHAR(50) NOT NULL UNIQUE,
     tipo_documento NVARCHAR(10) NOT NULL DEFAULT 'FEL',
     estado NVARCHAR(15) NOT NULL DEFAULT 'BORRADOR' CHECK (estado IN ('BORRADOR','VALIDADA','CERTIFICADA','ANULADA')),
@@ -200,8 +213,10 @@ CREATE TABLE facturas_fel (
     tarifa_aplicada DECIMAL(10,2) NOT NULL,
     descuento_aplicado DECIMAL(15,2) NOT NULL DEFAULT 0,
     subtotal DECIMAL(15,2) NOT NULL,
+    subtotal_q DECIMAL(15,2) NOT NULL DEFAULT 0,
     iva DECIMAL(15,2) NOT NULL,
     total_factura DECIMAL(15,2) NOT NULL,
+    total_factura_q DECIMAL(15,2) NOT NULL DEFAULT 0,
     nit_cliente NVARCHAR(13) NOT NULL,
     nombre_cliente_facturacion NVARCHAR(255) NOT NULL,
     fecha_emision DATETIME2 NOT NULL DEFAULT GETDATE(),
@@ -214,6 +229,7 @@ CREATE TABLE facturas_fel (
     CONSTRAINT FK_facturas_orden FOREIGN KEY (orden_id) REFERENCES ordenes(id),
     CONSTRAINT FK_facturas_cliente FOREIGN KEY (cliente_id) REFERENCES usuarios(id),
     CONSTRAINT FK_facturas_contrato FOREIGN KEY (contrato_id) REFERENCES contratos(id),
+    CONSTRAINT FK_facturas_moneda FOREIGN KEY (moneda_id) REFERENCES monedas(id),
     CONSTRAINT FK_facturas_certificado_por FOREIGN KEY (certificado_por) REFERENCES usuarios(id)
 );
 
@@ -331,3 +347,23 @@ END TRY
 BEGIN CATCH
   PRINT 'Error en migración: ' + ERROR_MESSAGE();
 END CATCH;
+
+-- ============================================
+-- INSERCIONES DE DATOS INICIALES
+-- ============================================
+
+-- Insertar monedas base (si no existen)
+IF NOT EXISTS (SELECT 1 FROM monedas WHERE nombre = 'QUETZAL')
+BEGIN
+  INSERT INTO monedas (nombre, simbolo, cambio) VALUES 
+  ('QUETZAL', 'Q', 1.0000),
+  ('DÓLAR', '$', 7.7500),
+  ('EURO', '€', 8.4500),
+  ('LIBRA', '£', 9.7500),
+  ('PESO MEXICANO', '₱', 0.4500),
+  ('LEMPIRA', 'L', 0.3000),
+  ('COLÓN', '₡', 0.0147),
+  ('CÓRDOBA', 'C$', 0.2200),
+  ('BALBOA', 'B/.', 7.7500),
+  ('DÓLAR BLZ', '$', 7.6000);
+END;

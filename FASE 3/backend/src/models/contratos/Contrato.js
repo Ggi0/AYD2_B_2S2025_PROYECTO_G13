@@ -35,28 +35,84 @@ const { getConnection } = require('../../config/db');
 const crearContrato = async (datos) => {
   const {
     numero_contrato, cliente_id, fecha_inicio, fecha_fin,
-    limite_credito, plazo_pago, creado_por
+    limite_credito, plazo_pago, creado_por, moneda_id = 1
   } = datos;
 
-  const pool = await getConnection();
-  const result = await pool.request()
-    .input('numero_contrato', sql.NVarChar,     numero_contrato)
-    .input('cliente_id',      sql.Int,          cliente_id)
-    .input('fecha_inicio',    sql.Date,         fecha_inicio)
-    .input('fecha_fin',       sql.Date,         fecha_fin)
-    .input('limite_credito',  sql.Decimal(15,2), limite_credito)
-    .input('plazo_pago',      sql.Int,          plazo_pago)
-    .input('creado_por',      sql.Int,          creado_por)
-    .query(`
-      INSERT INTO contratos
-        (numero_contrato, cliente_id, fecha_inicio, fecha_fin,
-         limite_credito, plazo_pago, creado_por)
-      OUTPUT INSERTED.*
-      VALUES
-        (@numero_contrato, @cliente_id, @fecha_inicio, @fecha_fin,
-         @limite_credito, @plazo_pago, @creado_por)
-    `);
-  return result.recordset[0];
+  // Validación de parámetros críticos
+  if (!numero_contrato) throw new Error('numero_contrato es requerido');
+  if (!cliente_id) throw new Error('cliente_id es requerido');
+  if (!fecha_inicio) throw new Error('fecha_inicio es requerido');
+  if (!fecha_fin) throw new Error('fecha_fin es requerido');
+  if (!limite_credito) throw new Error('limite_credito es requerido');
+  if (!plazo_pago) throw new Error('plazo_pago es requerido');
+  if (!creado_por) throw new Error('creado_por es requerido - Usuario no autenticado');
+
+  // Validar moneda_id válida
+  const MONEDAS_VALIDAS = [1, 2, 6, 7];
+  if (!MONEDAS_VALIDAS.includes(moneda_id)) {
+    throw new Error(`Moneda inválida: ${moneda_id}. Solo se permiten: 1=GTQ, 2=USD, 6=HNL, 7=SVC`);
+  }
+
+  try {
+    const pool = await getConnection();
+    
+    // Insertar sin OUTPUT (porque hay triggers en la tabla)
+    await pool.request()
+      .input('numero_contrato', sql.NVarChar,     numero_contrato)
+      .input('cliente_id',      sql.Int,          cliente_id)
+      .input('moneda_id',       sql.Int,          moneda_id)
+      .input('fecha_inicio',    sql.Date,         fecha_inicio)
+      .input('fecha_fin',       sql.Date,         fecha_fin)
+      .input('limite_credito',  sql.Decimal(15,2), limite_credito)
+      .input('plazo_pago',      sql.Int,          plazo_pago)
+      .input('creado_por',      sql.Int,          creado_por)
+      .query(`
+        INSERT INTO contratos
+          (numero_contrato, cliente_id, moneda_id, fecha_inicio, fecha_fin,
+           limite_credito, plazo_pago, creado_por)
+        VALUES
+          (@numero_contrato, @cliente_id, @moneda_id, @fecha_inicio, @fecha_fin,
+           @limite_credito, @plazo_pago, @creado_por)
+      `);
+    
+    // Recuperar el registro insertado (sin OUTPUT por los triggers)
+    const resultSelect = await pool.request()
+      .input('numero_contrato', sql.NVarChar, numero_contrato)
+      .query(`SELECT TOP 1 * FROM contratos WHERE numero_contrato = @numero_contrato`);
+    
+    if (!resultSelect.recordset || resultSelect.recordset.length === 0) {
+      throw new Error('No se pudo recuperar el contrato después de crear');
+    }
+    
+    return resultSelect.recordset[0];
+  } catch (dbError) {
+    console.error('[Contrato.crearContrato] Error en BD:', {
+      codigo: dbError.code,
+      mensaje: dbError.message,
+      numero: dbError.number,
+      linea: dbError.lineNumber,
+      procedimiento: dbError.procedureName
+    });
+
+    // Errores específicos de MSSQL
+    if (dbError.code === 'EREQUEST') {
+      // Violación de foreign key
+      if (dbError.message.includes('FK_contratos_cliente')) {
+        throw new Error(`Cliente no encontrado: ${cliente_id}`);
+      }
+      if (dbError.message.includes('FK_contratos_moneda')) {
+        throw new Error(`Moneda no encontrada en BD: ${moneda_id}`);
+      }
+      if (dbError.message.includes('FK_contratos_creado_por')) {
+        throw new Error(`Usuario creador no encontrado: ${creado_por}`);
+      }
+      if (dbError.message.includes('numero_contrato')) {
+        throw new Error(`El número de contrato ${numero_contrato} ya existe`);
+      }
+    }
+
+    throw new Error(`Error en base de datos: ${dbError.message}`);
+  }
 };
 
 /**
@@ -110,9 +166,11 @@ const listarTodos = async (limit, estado) => {
     SELECT c.id, c.numero_contrato, c.fecha_inicio, c.fecha_fin,
            c.estado, c.limite_credito, c.saldo_usado,
            c.plazo_pago, c.fecha_creacion,
-           u.nombre AS cliente_nombre, u.nit AS cliente_nit
+           u.nombre AS cliente_nombre, u.nit AS cliente_nit,
+           c.moneda_id, m.nombre AS nombre_moneda, m.simbolo AS simbolo_moneda
     FROM contratos c
     LEFT JOIN usuarios u ON u.id = c.cliente_id
+    LEFT JOIN monedas m ON m.id = c.moneda_id
   `;
   
   const params = [];
@@ -155,6 +213,7 @@ const listarTodos = async (limit, estado) => {
  *   - {number} saldo_usado - Saldo utilizado del crédito
  *   - {number} plazo_pago - Plazo en días
  *   - {Date} fecha_creacion - Fecha de creación
+ *   - {number} moneda_id - ID de la moneda (1=GTQ, 2=USD, 6=HNL, 7=SVC)
  * @example
  * const contratos = await listarPorCliente(5);
  */
@@ -169,7 +228,7 @@ const listarPorCliente = async (cliente_id) => {
     .query(`
       SELECT c.id, c.numero_contrato, c.fecha_inicio, c.fecha_fin,
              c.estado, c.limite_credito, c.saldo_usado,
-             c.plazo_pago, c.fecha_creacion
+             c.plazo_pago, c.fecha_creacion, c.moneda_id
       FROM contratos c
       WHERE c.cliente_id = @cliente_id
       ORDER BY c.fecha_creacion DESC
@@ -206,8 +265,10 @@ const buscarVigentePorCliente = async (cliente_id) => {
     .query(`
       SELECT TOP 1
         c.id, c.numero_contrato, c.fecha_inicio, c.fecha_fin,
-        c.estado, c.limite_credito, c.saldo_usado, c.plazo_pago
+        c.estado, c.limite_credito, c.saldo_usado, c.plazo_pago,
+        c.moneda_id, m.nombre AS nombre_moneda, m.simbolo AS simbolo_moneda
       FROM contratos c
+      LEFT JOIN monedas m ON m.id = c.moneda_id
       WHERE c.cliente_id = @cliente_id
         AND c.estado      = 'VIGENTE'
         AND c.fecha_fin  >= CAST(GETDATE() AS DATE)
@@ -240,8 +301,10 @@ const buscarTodosPorCliente = async (cliente_id) => {
     .query(`
       SELECT
         c.id, c.numero_contrato, c.fecha_inicio, c.fecha_fin,
-        c.estado, c.limite_credito, c.saldo_usado, c.plazo_pago
+        c.estado, c.limite_credito, c.saldo_usado, c.plazo_pago,
+        c.moneda_id, m.nombre AS nombre_moneda, m.simbolo AS simbolo_moneda
       FROM contratos c
+      LEFT JOIN monedas m ON m.id = c.moneda_id
       WHERE c.cliente_id = @cliente_id
         AND c.estado      = 'VIGENTE'
         AND c.fecha_fin  >= CAST(GETDATE() AS DATE)
@@ -273,31 +336,92 @@ const buscarTodosPorCliente = async (cliente_id) => {
 const actualizarContrato = async (id, datos) => {
   const {
     fecha_inicio, fecha_fin, limite_credito,
-    plazo_pago, estado, modificado_por
+    plazo_pago, estado, modificado_por, moneda_id
   } = datos;
 
-  const pool = await getConnection();
-  const result = await pool.request()
-    .input('id',             sql.Int,          id)
-    .input('fecha_inicio',   sql.Date,         fecha_inicio)
-    .input('fecha_fin',      sql.Date,         fecha_fin)
-    .input('limite_credito', sql.Decimal(15,2), limite_credito)
-    .input('plazo_pago',     sql.Int,          plazo_pago)
-    .input('estado',         sql.NVarChar,     estado)
-    .input('modificado_por', sql.Int,          modificado_por)
-    .query(`
+  // Validación crítica
+  if (!modificado_por) {
+    throw new Error('modificado_por es requerido - Usuario no autenticado');
+  }
+
+  try {
+    const pool = await getConnection();
+    const request = pool.request()
+      .input('id', sql.Int, id);
+    
+    // Construir dinámicamente el UPDATE basado en qué campos se proporcionan
+    const updates = [];
+
+    if (fecha_inicio !== undefined) {
+      updates.push('fecha_inicio = @fecha_inicio');
+      request.input('fecha_inicio', sql.Date, fecha_inicio);
+    }
+    if (fecha_fin !== undefined) {
+      updates.push('fecha_fin = @fecha_fin');
+      request.input('fecha_fin', sql.Date, fecha_fin);
+    }
+    if (limite_credito !== undefined) {
+      updates.push('limite_credito = @limite_credito');
+      request.input('limite_credito', sql.Decimal(15,2), limite_credito);
+    }
+    if (plazo_pago !== undefined) {
+      updates.push('plazo_pago = @plazo_pago');
+      request.input('plazo_pago', sql.Int, plazo_pago);
+    }
+    if (estado !== undefined) {
+      updates.push('estado = @estado');
+      request.input('estado', sql.NVarChar, estado);
+    }
+    if (moneda_id !== undefined) {
+      updates.push('moneda_id = @moneda_id');
+      request.input('moneda_id', sql.Int, moneda_id);
+    }
+
+    updates.push('modificado_por = @modificado_por');
+    updates.push('fecha_modificacion = GETDATE()');
+    request.input('modificado_por', sql.Int, modificado_por);
+
+    // UPDATE sin OUTPUT (por los triggers)
+    const updateQuery = `
       UPDATE contratos
-      SET fecha_inicio       = @fecha_inicio,
-          fecha_fin          = @fecha_fin,
-          limite_credito     = @limite_credito,
-          plazo_pago         = @plazo_pago,
-          estado             = @estado,
-          modificado_por     = @modificado_por,
-          fecha_modificacion = GETDATE()
-      OUTPUT INSERTED.*
+      SET ${updates.join(', ')}
       WHERE id = @id
+    `;
+
+    await request.query(updateQuery);
+
+    // SELECT para obtener el registro DESPUÉS de que el trigger ejecutó
+    const selectRequest = pool.request()
+      .input('id', sql.Int, id);
+    
+    const selectResult = await selectRequest.query(`
+      SELECT * FROM contratos WHERE id = @id
     `);
-  return result.recordset[0];
+
+    if (!selectResult.recordset || selectResult.recordset.length === 0) {
+      throw new Error('No se pudo recuperar el contrato después de actualizar');
+    }
+
+    return selectResult.recordset[0];
+  } catch (dbError) {
+    console.error('[Contrato.actualizarContrato] Error en BD:', {
+      codigo: dbError.code,
+      mensaje: dbError.message,
+      numero: dbError.number
+    });
+
+    // Errores específicos de MSSQL
+    if (dbError.code === 'EREQUEST') {
+      if (dbError.message.includes('FK_contratos_moneda')) {
+        throw new Error(`Moneda no encontrada en BD: ${moneda_id}`);
+      }
+      if (dbError.message.includes('FK_contratos_modificado_por')) {
+        throw new Error(`Usuario modificador no encontrado: ${modificado_por}`);
+      }
+    }
+
+    throw new Error(`Error en base de datos: ${dbError.message}`);
+  }
 };
 
 /**

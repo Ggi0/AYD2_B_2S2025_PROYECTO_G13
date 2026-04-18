@@ -1,6 +1,18 @@
 "use strict";
 const ordenStore = require("../../models/orden/orden.store");
+const { convertirMoneda, esMonedaValida } = require("../../utils/conversionMonedas");
 
+/**
+ * Genera una nueva orden de transporte
+ * SEGÚN ENUNCIADO: La orden hereda la moneda del contrato
+ * - El costo se calcula en la moneda del contrato
+ * - La validación de crédito considera la moneda pactada
+ * 
+ * @async
+ * @param {Object} payload - Datos de la orden
+ * @returns {Promise<Object>} Orden creada con detalles económicos
+ * @throws {Error} Si validaciones fallan
+ */
 async function generarOrden(payload) {
   const ctx = await ordenStore.obtenerContextoValidacion(
     payload.cliente_id,
@@ -10,44 +22,64 @@ async function generarOrden(payload) {
   );
 
   // Validaciones de seguridad
-  if (!ctx.contrato) throw crearError("Contrato no vigente o bloqueado", 403);
+  if (!ctx.contrato)
+    throw crearError(
+      "No se encontró un contrato vigente que cubra esta ruta y peso",
+      403,
+    );
   if (ctx.facturasVencidas > 0)
     throw crearError("Tiene facturas vencidas", 403);
   if (!ctx.ruta) throw crearError("Ruta no autorizada por contrato", 403);
   if (!ctx.tarifa) throw crearError("Peso excede capacidad de unidades", 403);
 
-  // 1. Cálculo del costo base inicial
-  const costoBase = ctx.ruta.distancia_km * ctx.tarifa.costo_km;
-
-  // 2. Manejo del porcentaje (Si en la BD es 12, aquí llega como 12)
-  const porcentaje = ctx.descuento || 0;
-  const factorDescuento = porcentaje / 100;
-
-  const montoDescuento = costoBase * factorDescuento;
-  const costoFinal = costoBase - montoDescuento;
-
-  // 3. Validación de límite de crédito
-  if (ctx.contrato.saldo_usado + costoFinal > ctx.contrato.limite_credito) {
-    throw crearError("Crédito insuficiente para cubrir esta orden", 403);
+  // MONEDA DEL CONTRATO - Se usa en toda la orden
+  const monedaContratoId = ctx.contrato.moneda_id;
+  if (!esMonedaValida(monedaContratoId)) {
+    throw crearError(`Moneda del contrato inválida: ${monedaContratoId}`, 400);
   }
 
-  // 4. Inserción en la base de datos
+  // 1. Cálculo del costo base inicial (por defecto en GTQ)
+  const costoBaseGTQ = ctx.ruta.distancia_km * ctx.tarifa.costo_km;
+
+  // 2. Manejo del porcentaje de descuento
+  const porcentaje = ctx.descuento || 0;
+  const factorDescuento = porcentaje / 100;
+  const montoDescuentoGTQ = costoBaseGTQ * factorDescuento;
+  const costoFinalGTQ = costoBaseGTQ - montoDescuentoGTQ;
+
+  // 3. Convertir costo a la moneda del contrato
+  const costoFinalMoneda = monedaContratoId === 1 
+    ? costoFinalGTQ 
+    : await convertirMoneda(costoFinalGTQ, 1, monedaContratoId);
+
+  // 4. Validación de límite de crédito EN LA MONEDA DEL CONTRATO
+  const saldoUsadoMoneda = ctx.contrato.saldo_usado; // Ya está en moneda_id
+  if (saldoUsadoMoneda + costoFinalMoneda > ctx.contrato.limite_credito) {
+    throw crearError(
+      `Crédito insuficiente. Usado: ${saldoUsadoMoneda}, Disponible: ${ctx.contrato.limite_credito - saldoUsadoMoneda}, Orden: ${costoFinalMoneda}`,
+      403
+    );
+  }
+
+  // 5. Inserción en la base de datos
   const nuevaOrden = await ordenStore.insertarOrden({
     ...payload,
     contrato_id: ctx.contrato.id,
-    costo: costoFinal, // Valor neto a pagar
-    tarifa_aplicada: ctx.tarifa.costo_km, // Guardamos la tarifa original para auditoría
+    costo: costoFinalMoneda, // Costo en moneda del contrato
+    tarifa_aplicada: ctx.tarifa.costo_km,
   });
 
   return {
     mensaje: "Orden registrada exitosamente",
     data: {
       ...nuevaOrden,
+      moneda_id: monedaContratoId,
       detalle_economico: {
-        subtotal: costoBase,
+        subtotal: costoFinalMoneda,
         descuento_porcentual: `${porcentaje}%`,
-        monto_descontado: montoDescuento,
-        total_neto: costoFinal,
+        monto_descontado: montoDescuentoGTQ > 0 ? await convertirMoneda(montoDescuentoGTQ, 1, monedaContratoId) : 0,
+        total_neto: costoFinalMoneda,
+        nota: "Costos en moneda del contrato"
       },
     },
   };

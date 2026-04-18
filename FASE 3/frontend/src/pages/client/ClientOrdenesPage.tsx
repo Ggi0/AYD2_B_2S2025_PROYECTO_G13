@@ -16,6 +16,18 @@ import {
 import ClientHeader from "../../components/client/ClientHeader";
 import ClientMenu from "../../components/client/ClientMenu";
 import ModalNuevaOrden from "../../components/client/ModalNuevaOrden";
+import apiService from "../../services/api";
+
+// Helper para obtener código de moneda desde moneda_id
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
 
 const ClienteOrdenesPage: React.FC = () => {
   const { user } = useAuth();
@@ -32,6 +44,7 @@ const ClienteOrdenesPage: React.FC = () => {
   } = useClientOrders();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [monedaCode, setMonedaCode] = useState('GTQ');
 
   const userName =
     user?.nombres && user?.apellidos
@@ -44,6 +57,18 @@ const ClienteOrdenesPage: React.FC = () => {
   useEffect(() => {
     if (userId) {
       cargarDatos(userId);
+      // Obtener contratos para determinar la moneda del cliente
+      (async () => {
+        try {
+          const resContratos = await (apiService as any).listarContratosPorCliente(userId);
+          if (resContratos?.ok && resContratos.data?.length > 0) {
+            const moneda = getCodigoMonedaDesdeId(resContratos.data[0].moneda_id);
+            setMonedaCode(moneda);
+          }
+        } catch (err) {
+          console.error('Error al cargar contratos:', err);
+        }
+      })();
     }
   }, [userId, cargarDatos]);
 
@@ -165,7 +190,7 @@ const ClienteOrdenesPage: React.FC = () => {
                     Crédito Disponible
                   </p>
                   <p className="text-2xl font-bold text-teal-600">
-                    {formatMoney(estadisticas?.availableCredit || 0)}
+                    {formatMoney(estadisticas?.availableCredit || 0, monedaCode)}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-teal-100 rounded-full flex items-center justify-center">
@@ -267,7 +292,7 @@ const ClienteOrdenesPage: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                            {formatMoney(orden.costo)}
+                            {formatMoney(orden.costo, monedaCode)}
                           </td>
                           <td className="px-6 py-4">
                             <span

@@ -18,6 +18,7 @@ export type ClienteSimple = {
   nit: string;
   email: string;
   telefono?: string;
+  pais?: string;
   tipo_usuario?: string;
 };
 
@@ -164,10 +165,20 @@ export const ContratoService = {
 
 // ============ UTILIDADES ============
 
-export const formatMoney = (value: number): string => {
-  return new Intl.NumberFormat('es-GT', {
+export const formatMoney = (value: number, currencyCode: string = 'GTQ'): string => {
+  // Mapeo de códigos de moneda a la configuración correcta de Intl
+  const currencyConfigs: Record<string, { locale: string; code: string }> = {
+    'GTQ': { locale: 'es-GT', code: 'GTQ' },  // Quetzal Guatemalteco
+    'USD': { locale: 'en-US', code: 'USD' },  // Dólar Estadounidense
+    'HNL': { locale: 'es-HN', code: 'HNL' },  // Lempira Hondureño
+    'SVC': { locale: 'es-SV', code: 'SVC' },  // Colón Salvadoreño
+  };
+
+  const config = currencyConfigs[currencyCode] || currencyConfigs['GTQ'];
+
+  return new Intl.NumberFormat(config.locale, {
     style: 'currency',
-    currency: 'GTQ',
+    currency: config.code,
     minimumFractionDigits: 2
   }).format(value);
 };

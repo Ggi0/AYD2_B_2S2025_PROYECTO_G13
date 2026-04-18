@@ -1,7 +1,6 @@
 "use strict";
 const { sql, getConnection } = require("../../config/db");
 
-
 async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
   const pool = await getConnection();
   const result = await pool
@@ -10,19 +9,32 @@ async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
     .input("origen", sql.NVarChar, `%${origen}%`)
     .input("destino", sql.NVarChar, `%${destino}%`)
     .input("peso", sql.Decimal(10, 2), peso).query(`
-      -- 1. Declarar y asignar la variable de forma aislada
-      DECLARE @v_contrato_id INT;
       
-      SET @v_contrato_id = (
-          SELECT TOP 1 id 
-          FROM contratos 
-          WHERE cliente_id = @cliente_id 
-            AND estado = 'VIGENTE' 
-            AND fecha_fin >= GETDATE()
-          ORDER BY fecha_inicio DESC
-      );
+      -- 1. Buscamos EL CONTRATO que cumple con todas las dimensiones
+      -- Si el cliente tiene 3 contratos, esto filtrará el que tenga la ruta Y la tarifa para este peso
+      DECLARE @v_contrato_id INT;
+      DECLARE @v_distancia_km DECIMAL(10,2);
+      DECLARE @v_tarifa_negociada DECIMAL(10,2);
 
-      -- 2. Devolver los datos del contrato (Recordset 0)
+      SELECT TOP 1 
+          @v_contrato_id = c.id,
+          @v_distancia_km = ra.distancia_km,
+          @v_tarifa_negociada = ct.costo_km_negociado
+      FROM contratos c
+      INNER JOIN rutas_autorizadas ra ON ra.contrato_id = c.id
+      INNER JOIN contrato_tarifas ct ON ct.contrato_id = c.id
+      INNER JOIN tarifario t ON ct.tarifario_id = t.id
+      WHERE c.cliente_id = @cliente_id 
+        AND c.estado = 'VIGENTE'
+        AND CAST(GETDATE() AS DATE) BETWEEN c.fecha_inicio AND c.fecha_fin
+        AND ra.origen LIKE @origen 
+        AND ra.destino LIKE @destino
+        AND ra.activa = 1
+        AND @peso <= t.limite_peso_ton
+        AND t.activo = 1
+      ORDER BY t.limite_peso_ton ASC, c.fecha_inicio DESC;
+
+      -- 2. Devolver los datos del contrato encontrado (Recordset 0)
       SELECT id, limite_credito, saldo_usado 
       FROM contratos 
       WHERE id = @v_contrato_id;
@@ -33,32 +45,22 @@ async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
       WHERE cliente_id = @cliente_id AND estado_cobro = 'VENCIDA';
 
       -- 4. Ruta Autorizada (Recordset 2)
-      SELECT TOP 1 distancia_km 
-      FROM rutas_autorizadas 
-      WHERE contrato_id = @v_contrato_id
-        AND origen LIKE @origen 
-        AND destino LIKE @destino;
+      -- Ya la validamos arriba, pero la devolvemos para el cálculo del JS
+      SELECT @v_distancia_km AS distancia_km WHERE @v_contrato_id IS NOT NULL;
 
-      -- 5. Tarifa (Recordset 3)
-      SELECT TOP 1 
-          ISNULL(ct.costo_km_negociado, t.costo_base_km) AS costo_km
-      FROM tarifario t
-      LEFT JOIN contrato_tarifas ct ON ct.tarifario_id = t.id 
-                                   AND ct.contrato_id = @v_contrato_id
-      WHERE @peso <= t.limite_peso_ton
-      ORDER BY t.limite_peso_ton ASC;
+      -- 5. Tarifa Negociada (Recordset 3)
+      SELECT @v_tarifa_negociada AS costo_km WHERE @v_contrato_id IS NOT NULL;
 
       -- 6. Descuento Especial (Recordset 4)
-        -- Buscamos si hay un descuento para ese contrato y ese tipo de unidad específico
-        SELECT TOP 1 porcentaje_descuento
-        FROM descuentos_contrato
-        WHERE contrato_id = @v_contrato_id 
-          AND tipo_unidad = (
-              SELECT TOP 1 tipo_unidad 
-              FROM tarifario 
-              WHERE @peso <= limite_peso_ton 
-              ORDER BY limite_peso_ton ASC
-          );
+      SELECT TOP 1 porcentaje_descuento
+      FROM descuentos_contrato
+      WHERE contrato_id = @v_contrato_id 
+        AND tipo_unidad = (
+            SELECT TOP 1 tipo_unidad 
+            FROM tarifario 
+            WHERE @peso <= limite_peso_ton 
+            ORDER BY limite_peso_ton ASC
+        );
     `);
 
   return {
@@ -306,20 +308,24 @@ async function getRutasAutorizadas(id_cliente) {
     const pool = await getConnection();
     const result = await pool.request().input("id_cliente", sql.Int, id_cliente)
       .query(`
-        SELECT origen, destino, tipo_carga
-        FROM rutas_autorizadas
-        WHERE activa = 1 
-        AND contrato_id = (
-            SELECT TOP 1 id 
-            FROM contratos 
-            WHERE cliente_id = @id_cliente 
-            AND estado = 'VIGENTE' 
-            ORDER BY fecha_inicio DESC
-        );
+        SELECT DISTINCT
+            ra.origen, 
+            ra.destino, 
+            ra.tipo_carga,
+            ra.distancia_km,
+            c.numero_contrato -- Opcional, por si quieres saber de qué contrato viene
+        FROM rutas_autorizadas ra
+        INNER JOIN contratos c ON ra.contrato_id = c.id
+        WHERE c.cliente_id = @id_cliente 
+          AND ra.activa = 1
+          AND c.estado = 'VIGENTE'
+          -- Validación estricta de fechas de inicio y fin
+          AND CAST(GETDATE() AS DATE) BETWEEN c.fecha_inicio AND c.fecha_fin
+        ORDER BY ra.origen, ra.destino;
       `);
 
-    // Retornamos todas las filas del primer (y único) recordset
-    return result.recordset.length > 0 ? result.recordset : [];
+    // Retornamos todas las rutas encontradas en todos los contratos vigentes
+    return result.recordset;
   } catch (error) {
     console.error("Error al obtener rutas autorizadas:", error);
     throw error;
@@ -537,8 +543,6 @@ async function finalizarEntrega(ordenId, rutasArchivos, io = null) {
       // NO relanzar: el cierre de la orden ya fue exitoso
     }
     // ─────────────────────────────────────────────────────────────────
-
-
 
     return { ordenId, vehiculoLiberado: vehiculoId, estadoFinal: "CERRADA" };
   } catch (error) {

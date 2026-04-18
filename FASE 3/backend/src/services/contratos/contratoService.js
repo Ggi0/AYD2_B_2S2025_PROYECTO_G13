@@ -48,88 +48,149 @@ const generarNumeroContrato = async () => {
 /**
  * @async
  * @function crearContrato
- * @description Crea un nuevo contrato de transporte para un cliente corporativo
- * Valida cliente activo, plazo de pago, fechas, y crea tarifas/rutas si se proporcionan
- * El número de contrato se genera automáticamente si no se proporciona
+ * @description Crea nuevo contrato multimoneda. SEGÚN ENUNCIADO:
+ * - Moneda "pactada" al crear contrato: GTQ (1), USD (2), HNL (6), SVC (7)
+ * - Si no se especifica moneda_id → se sugiere automáticamente por país del cliente
+ * - Usuario puede override: enviar moneda_id diferente a la sugerida
  * @param {Object} datos - Datos del contrato
- * @param {string} [datos.numero_contrato] - Número identificador único (se genera automáticamente si no se proporciona)
- * @param {number} datos.cliente_id - ID del cliente corporativo
- * @param {string} datos.fecha_inicio - Fecha de inicio (YYYY-MM-DD)
- * @param {string} datos.fecha_fin - Fecha de finalización (debe ser > fecha_inicio)
- * @param {number} datos.limite_credito - Límite de crédito permitido en soles
- * @param {number} datos.plazo_pago - Plazo de pago: 15, 30 o 45 días
- * @param {Array} [datos.tarifas] - Tarifas del contrato por tipo de unidad
- * @param {Array} [datos.rutas] - Rutas autorizadas del contrato
- * @param {number} usuario_ejecutor - ID del usuario que crea el contrato (para auditoría)
- * @param {string} ip - Dirección IP del cliente (para auditoría)
- * @returns {Promise<Object>} Contrato creado con todos sus datos
- * @throws {Error} Si cliente no existe, no es corporativo, inactivo o datos inválidos
+ * @param {string} [datos.numero_contrato] - Número único (auto-generado)
+ * @param {number} datos.cliente_id - ID cliente corporativo (OBLIGATORIO)
+ * @param {string} datos.fecha_inicio - Inicio vigencia YYYY-MM-DD (OBLIGATORIO)
+ * @param {string} datos.fecha_fin - Fin vigencia > fecha_inicio (OBLIGATORIO)
+ * @param {number} datos.limite_credito - Límite crédito en moneda pactada (OBLIGATORIO)\n * @param {number} datos.plazo_pago - 15, 30 o 45 días (OBLIGATORIO)
+ * @param {number} [datos.moneda_id] - 1=GTQ, 2=USD, 6=HNL, 7=SVC (OPCIONAL, sugerida por país)
+ * @param {string} [datos.pais] - País cliente (para sugerir moneda si moneda_id omitido)
+ * @param {Array} [datos.tarifas] - Tarifas por tipo de unidad
+ * @param {Array} [datos.rutas] - Rutas autorizadas
+ * @param {Array} [datos.descuentos] - Descuentos especiales
+ * @param {number} usuario_ejecutor - ID usuario creador (auditoría)
+ * @param {string} ip - IP origen (auditoría)
+ * @returns {Promise<Object>} Contrato con id, numero_contrato, moneda_id, fecha_creacion
+ * @throws {Error} Cliente inválido, moneda inválida, o datos inconsistentes
+ * @example
+ * // Crear contrato con moneda explícita
+ * POST /api/contratos
+ * { cliente_id: 5, fecha_inicio: \"2026-04-20\", fecha_fin: \"2027-04-20\",
+ *   limite_credito: 50000, plazo_pago: 30, moneda_id: 2 }
+ * // Crear contrato, moneda sugerida por país (GUATEMALA→GTQ)
+ * POST /api/contratos
+ * { cliente_id: 6, fecha_inicio: \"2026-04-20\", fecha_fin: \"2027-04-20\",
+ *   limite_credito: 30000, plazo_pago: 15, pais: \"HONDURAS\" }
+ *  // → Se sugiere moneda_id: 6 (HNL - Lempira)
  */
 const crearContrato = async (datos, usuario_ejecutor, ip) => {
-  let { numero_contrato, cliente_id, fecha_inicio, fecha_fin, limite_credito, plazo_pago, tarifas, rutas, descuentos } = datos;
-
-  // Generar número de contrato automáticamente si no se proporciona
-  if (!numero_contrato) {
-    numero_contrato = await generarNumeroContrato();
+  const { obtenerMonedaPorPais } = require('../../utils/monedaPorPais');
+  
+  // Validar que el usuario esté presente
+  if (!usuario_ejecutor) {
+    throw { status: 401, mensaje: 'Usuario no autenticado. Debe iniciar sesión para crear contratos.' };
   }
 
-  const cliente = await Usuario.buscarPorId(cliente_id);
-  if (!cliente) throw { status: 404, mensaje: 'Cliente no encontrado' };
-  if (cliente.tipo_usuario !== 'CLIENTE_CORPORATIVO') {
-    throw { status: 400, mensaje: 'Solo se pueden crear contratos para clientes corporativos' };
-  }
-  if (cliente.estado !== 'ACTIVO') {
-    throw { status: 400, mensaje: 'No se puede crear un contrato para un cliente bloqueado o inactivo' };
-  }
+  try {
+    let { numero_contrato, cliente_id, fecha_inicio, fecha_fin, limite_credito, plazo_pago, tarifas, rutas, descuentos, moneda_id, pais } = datos;
 
-  const plazosValidos = [15, 30, 45];
-  if (!plazosValidos.includes(plazo_pago)) {
-    throw { status: 400, mensaje: 'El plazo de pago debe ser 15, 30 o 45 días' };
-  }
-  if (new Date(fecha_fin) <= new Date(fecha_inicio)) {
-    throw { status: 400, mensaje: 'La fecha de fin debe ser mayor a la fecha de inicio' };
-  }
-
-  const contrato = await Contrato.crearContrato({
-    numero_contrato, cliente_id, fecha_inicio, fecha_fin,
-    limite_credito, plazo_pago, creado_por: usuario_ejecutor
-  });
-
-  if (tarifas && tarifas.length > 0) {
-    for (const tarifa of tarifas) {
-      await ContratoTarifa.crearContratoTarifa({ contrato_id: contrato.id, ...tarifa });
+    // Generar número de contrato automáticamente si no se proporciona
+    if (!numero_contrato) {
+      numero_contrato = await generarNumeroContrato();
     }
-  }
 
-  if (rutas && rutas.length > 0) {
-    for (const ruta of rutas) {
-      await RutaAutorizada.crearRuta({ contrato_id: contrato.id, ...ruta });
+    const cliente = await Usuario.buscarPorId(cliente_id);
+    if (!cliente) throw { status: 404, mensaje: 'Cliente no encontrado' };
+    if (cliente.tipo_usuario !== 'CLIENTE_CORPORATIVO') {
+      throw { status: 400, mensaje: 'Solo se pueden crear contratos para clientes corporativos' };
     }
-  }
-
-  if (descuentos && descuentos.length > 0) {
-    for (const descuento of descuentos) {
-      await Descuento.crearDescuento({
-        contrato_id: contrato.id,
-        tipo_unidad: descuento.tipo_unidad.toUpperCase(),
-        porcentaje_descuento: descuento.porcentaje_descuento,
-        observacion: descuento.observacion || null,
-        autorizado_por: usuario_ejecutor
-      });
+    if (cliente.estado !== 'ACTIVO') {
+      throw { status: 400, mensaje: 'No se puede crear un contrato para un cliente bloqueado o inactivo' };
     }
+
+    const plazosValidos = [15, 30, 45];
+    if (!plazosValidos.includes(plazo_pago)) {
+      throw { status: 400, mensaje: 'El plazo de pago debe ser 15, 30 o 45 días' };
+    }
+    if (new Date(fecha_fin) <= new Date(fecha_inicio)) {
+      throw { status: 400, mensaje: 'La fecha de fin debe ser mayor a la fecha de inicio' };
+    }
+
+    // SEGÚN ENUNCIADO: Moneda pactada al crear contrato
+    // Si no se proporciona moneda_id, sugerir basada en país del cliente
+    if (!moneda_id) {
+      const paisCliente = pais || cliente.pais;
+      moneda_id = obtenerMonedaPorPais(paisCliente);
+    }
+
+    // Validar que la moneda sea una de las 4 del proyecto (GTQ, USD, HNL, SVC)
+    const MONEDAS_PERMITIDAS = [1, 2, 6, 7];
+    if (!MONEDAS_PERMITIDAS.includes(moneda_id)) {
+      throw { status: 400, mensaje: 'Moneda inválida. Monedas permitidas: 1=GTQ, 2=USD, 6=HNL, 7=SVC' };
+    }
+
+    console.log('[contratoService.crearContrato] Creando contrato con datos:', {
+      numero_contrato,
+      cliente_id,
+      moneda_id,
+      fecha_inicio,
+      fecha_fin,
+      limite_credito,
+      plazo_pago,
+      creado_por: usuario_ejecutor
+    });
+
+    const contrato = await Contrato.crearContrato({
+      numero_contrato, cliente_id, fecha_inicio, fecha_fin,
+      limite_credito, plazo_pago, creado_por: usuario_ejecutor, moneda_id
+    });
+
+    console.log('[contratoService.crearContrato] Contrato creado exitosamente:', contrato.id);
+
+    if (tarifas && tarifas.length > 0) {
+      for (const tarifa of tarifas) {
+        await ContratoTarifa.crearContratoTarifa({ contrato_id: contrato.id, ...tarifa });
+      }
+    }
+
+    if (rutas && rutas.length > 0) {
+      for (const ruta of rutas) {
+        await RutaAutorizada.crearRuta({ contrato_id: contrato.id, ...ruta });
+      }
+    }
+
+    if (descuentos && descuentos.length > 0) {
+      for (const descuento of descuentos) {
+        await Descuento.crearDescuento({
+          contrato_id: contrato.id,
+          tipo_unidad: descuento.tipo_unidad.toUpperCase(),
+          porcentaje_descuento: descuento.porcentaje_descuento,
+          observacion: descuento.observacion || null,
+          autorizado_por: usuario_ejecutor
+        });
+      }
+    }
+
+    await Auditoria.registrar({
+      tabla_afectada: 'contratos',
+      accion:         'CREATE',
+      registro_id:    contrato.id,
+      usuario_id:     usuario_ejecutor,
+      descripcion:    `Contrato ${numero_contrato} creado para cliente: ${cliente.nombre}`,
+      datos_nuevos:   contrato,
+      ip_origen:      ip
+    });
+
+    return contrato;
+  } catch (error) {
+    console.error('[contratoService.crearContrato] Error:', error);
+    
+    // Si es un error lanzado por nosotros, propagarlo
+    if (error.status && error.mensaje) {
+      throw error;
+    }
+    
+    // Si es un error de base de datos u otro, convertirlo a nuestro formato
+    throw {
+      status: error.status || 500,
+      mensaje: error.mensaje || error.message || 'Error al crear contrato'
+    };
   }
-
-  await Auditoria.registrar({
-    tabla_afectada: 'contratos',
-    accion:         'CREATE',
-    registro_id:    contrato.id,
-    usuario_id:     usuario_ejecutor,
-    descripcion:    `Contrato ${numero_contrato} creado para cliente: ${cliente.nombre}`,
-    datos_nuevos:   contrato,
-    ip_origen:      ip
-  });
-
-  return contrato;
 };
 
 const listarTodosContratos = async ({ limit, estado } = {}) => {
@@ -185,36 +246,77 @@ const listarContratosPorCliente = async (cliente_id) => {
  * @throws {Error} Si contrato no existe, no está vigente, o plazo_pago es inválido
  */
 const modificarContrato = async (id, datos, usuario_ejecutor, ip) => {
-  const contratoActual = await Contrato.buscarPorId(id);
-  if (!contratoActual) throw { status: 404, mensaje: 'Contrato no encontrado' };
-  if (contratoActual.estado !== 'VIGENTE') {
-    throw { status: 400, mensaje: 'Solo se pueden modificar contratos vigentes' };
+  // Validar autenticación
+  if (!usuario_ejecutor) {
+    throw { status: 401, mensaje: 'Usuario no autenticado. Debe iniciar sesión para modificar contratos.' };
   }
 
-  if (datos.plazo_pago) {
-    const plazosValidos = [15, 30, 45];
-    if (!plazosValidos.includes(datos.plazo_pago)) {
-      throw { status: 400, mensaje: 'El plazo de pago debe ser 15, 30 o 45 días' };
+  try {
+    const contratoActual = await Contrato.buscarPorId(id);
+    if (!contratoActual) {
+      throw { status: 404, mensaje: 'Contrato no encontrado' };
     }
+    
+    if (contratoActual.estado !== 'VIGENTE') {
+      throw { status: 400, mensaje: 'Solo se pueden modificar contratos vigentes' };
+    }
+
+    // Validar plazo_pago si se proporciona
+    if (datos.plazo_pago) {
+      const plazosValidos = [15, 30, 45];
+      if (!plazosValidos.includes(datos.plazo_pago)) {
+        throw { status: 400, mensaje: 'El plazo de pago debe ser 15, 30 o 45 días' };
+      }
+    }
+
+    // Validar moneda_id si se proporciona
+    if (datos.moneda_id) {
+      const MONEDAS_PERMITIDAS = [1, 2, 6, 7];
+      if (!MONEDAS_PERMITIDAS.includes(datos.moneda_id)) {
+        throw { status: 400, mensaje: 'Moneda inválida. Monedas permitidas: 1=GTQ, 2=USD, 6=HNL, 7=SVC' };
+      }
+    }
+
+    console.log('[contratoService.modificarContrato] Actualizando contrato:', {
+      id,
+      numero_contrato: contratoActual.numero_contrato,
+      modificado_por: usuario_ejecutor,
+      cambios: datos
+    });
+
+    const contratoActualizado = await Contrato.actualizarContrato(id, {
+      ...datos,
+      modificado_por: usuario_ejecutor
+    });
+
+    await Auditoria.registrar({
+      tabla_afectada:   'contratos',
+      accion:           'UPDATE',
+      registro_id:      id,
+      usuario_id:       usuario_ejecutor,
+      descripcion:      `Contrato ${contratoActual.numero_contrato} modificado`,
+      datos_anteriores: contratoActual,
+      datos_nuevos:     contratoActualizado,
+      ip_origen:        ip
+    });
+
+    console.log('[contratoService.modificarContrato] Contrato actualizado exitosamente:', contratoActualizado.id);
+
+    return contratoActualizado;
+  } catch (error) {
+    console.error('[contratoService.modificarContrato] Error:', error);
+    
+    // Si es un error lanzado por nosotros, propagarlo
+    if (error.status && error.mensaje) {
+      throw error;
+    }
+    
+    // Si es un error de base de datos u otro, convertirlo a nuestro formato
+    throw {
+      status: error.status || 500,
+      mensaje: error.mensaje || error.message || 'Error al modificar contrato'
+    };
   }
-
-  const contratoActualizado = await Contrato.actualizarContrato(id, {
-    ...datos,
-    modificado_por: usuario_ejecutor
-  });
-
-  await Auditoria.registrar({
-    tabla_afectada:   'contratos',
-    accion:           'UPDATE',
-    registro_id:      id,
-    usuario_id:       usuario_ejecutor,
-    descripcion:      `Contrato ${contratoActual.numero_contrato} modificado`,
-    datos_anteriores: contratoActual,
-    datos_nuevos:     contratoActualizado,
-    ip_origen:        ip
-  });
-
-  return contratoActualizado;
 };
 
 /**
@@ -334,7 +436,10 @@ const validarCliente = async (cliente_id, origen, destino, tipo_unidad) => {
       contratos_resumen: contratosActivos.map(c => ({
         numero_contrato: c.numero_contrato,
         limite_credito: c.limite_credito,
-        saldo_usado: c.saldo_usado
+        saldo_usado: c.saldo_usado,
+        moneda_id: c.moneda_id,
+        nombre_moneda: c.nombre_moneda,
+        simbolo_moneda: c.simbolo_moneda
       }))
     };
   }
@@ -370,7 +475,10 @@ const validarCliente = async (cliente_id, origen, destino, tipo_unidad) => {
       limite_credito:   contratoActual.limite_credito,
       saldo_usado:      contratoActual.saldo_usado,
       saldo_disponible: contratoActual.limite_credito - contratoActual.saldo_usado,
-      plazo_pago:       contratoActual.plazo_pago
+      plazo_pago:       contratoActual.plazo_pago,
+      moneda_id:        contratoActual.moneda_id,
+      nombre_moneda:    contratoActual.nombre_moneda,
+      simbolo_moneda:   contratoActual.simbolo_moneda
     },
     contratos_resumen: {
       total_limite_credito: totalLimiteCredito,
@@ -383,7 +491,10 @@ const validarCliente = async (cliente_id, origen, destino, tipo_unidad) => {
         saldo_usado: c.saldo_usado,
         saldo_disponible: c.limite_credito - c.saldo_usado,
         fecha_fin: c.fecha_fin,
-        plazo_pago: c.plazo_pago
+        plazo_pago: c.plazo_pago,
+        moneda_id: c.moneda_id,
+        nombre_moneda: c.nombre_moneda,
+        simbolo_moneda: c.simbolo_moneda
       }))
     },
     tarifa:    tarifa    ? { tipo_unidad: tarifa.tipo_unidad, costo_km_negociado: tarifa.costo_km_negociado, limite_peso_ton: tarifa.limite_peso_ton } : null,

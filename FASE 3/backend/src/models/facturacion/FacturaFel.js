@@ -27,28 +27,35 @@ const { getConnection } = require("../../config/db");
 /**
  * Crea el BORRADOR de una factura a partir de una orden entregada.
  *
- * Flujo del camino feliz (paso 6 -> 7):
- *   Orden marcada "Entregada"  ->  este método crea el borrador en estado BORRADOR.
+ * Incluye soporte para moneda pactada y tipo de cambio (FASE 3 - ENUNCIADO)
  *
  * La fórmula aplicada es:
- *   subtotal  = (distancia_km * tarifa_aplicada) - descuento_aplicado
- *   iva       = subtotal * 0.12
- *   total     = subtotal + iva
+ *   bruto = distancia_km * tarifa_aplicada
+ *   descuento_aplicado = bruto * (porcentaje / 100)
+ *   subtotal = bruto - descuento
+ *   iva = subtotal * 0.12
+ *   total = subtotal + iva
+ *
+ * Si moneda ≠ GTQ, todos los valores están en la moneda del contrato
+ * y se almacenan los valores en GTQ en campos _q para auditoría SAT
  *
  * @async
- * @param {Object} datos
+ * @param {Object} datos - Datos del borrador
  * @param {number} datos.orden_id
  * @param {number} datos.cliente_id
  * @param {number} datos.contrato_id
- * @param {string} datos.numero_factura          - Número único generado por el servicio
+ * @param {string} datos.numero_factura
  * @param {number} datos.distancia_km
- * @param {number} datos.tarifa_aplicada         - Q/km negociada del contrato
- * @param {number} datos.descuento_aplicado      - Monto absoluto de descuento
+ * @param {number} datos.tarifa_aplicada
+ * @param {number} datos.descuento_aplicado
  * @param {number} datos.subtotal
  * @param {number} datos.iva
  * @param {number} datos.total_factura
  * @param {string} datos.nit_cliente
  * @param {string} datos.nombre_cliente_facturacion
+ * @param {number} [datos.moneda_id=1] - ID moneda: 1=GTQ, 2=USD, 6=HNL, 7=SVC
+ * @param {number} [datos.subtotal_gtq] - Subtotal en GTQ para auditoría si moneda ≠ 1
+ * @param {number} [datos.total_gtq] - Total en GTQ para auditoría si moneda ≠ 1
  * @returns {Promise<Object>} Borrador creado
  */
 const crearBorrador = async (datos) => {
@@ -57,6 +64,9 @@ const crearBorrador = async (datos) => {
     distancia_km, tarifa_aplicada, descuento_aplicado,
     subtotal, iva, total_factura,
     nit_cliente, nombre_cliente_facturacion,
+    moneda_id = 1, // Default GTQ
+    subtotal_gtq = null, // Para auditoría si moneda ≠ GTQ
+    total_gtq = null, // Para auditoría si moneda ≠ GTQ
   } = datos;
  
   const pool   = await getConnection();
@@ -694,7 +704,7 @@ const obtenerDatosParaBorrador = async (orden_id) => {
         o.estado          AS estado_orden,
         o.vehiculo_id,
  
-        -- Contrato
+        -- Contrato (FASE 3: incluir moneda pactada)
         c.numero_contrato,
         c.plazo_pago,
         c.saldo_usado     AS contrato_saldo_usado,
@@ -758,7 +768,22 @@ const obtenerDatosParaBorrador = async (orden_id) => {
  * Genera automáticamente un borrador de factura a partir de una orden cerrada.
  * Usa los métodos existentes del modelo.
  */
+/**
+ * Genera automáticamente el borrador de factura cuando el piloto marca entrega
+ * 
+ * SEGÚN ENUNCIADO FASE 3:
+ * "En el instante en que el piloto reporta la entrega...se desencadena...
+ *  Ciclo de Facturación Inmediata: El área de facturación requiere disponer
+ *  de la entrega, contrato y MONEDA PACTADA...contemplar el tipo de cambio
+ *  vigente para normativas fiscales SAT"
+ *
+ * @async
+ * @param {number} orden_id - ID de la orden entregada
+ * @returns {Promise<Object>} Borrador de factura con moneda y tipo de cambio
+ * @throws {Error} Si la orden no existe o faltan datos
+ */
 const generarBorradorDesdeOrden = async (orden_id) => {
+  const { convertirMoneda } = require('../../utils/conversionMonedas');
 
   // 1. Verificar si ya existe factura (evitar duplicados)
   const existente = await buscarPorOrden(orden_id);
@@ -767,7 +792,7 @@ const generarBorradorDesdeOrden = async (orden_id) => {
     return existente;
   }
 
-  // 2. Obtener datos base
+  // 2. Obtener datos base (incluye moneda_id del contrato)
   const datos = await obtenerDatosParaBorrador(orden_id);
 
   if (!datos.moneda_id) {
@@ -782,21 +807,40 @@ const generarBorradorDesdeOrden = async (orden_id) => {
     throw new Error(`La orden ${orden_id} no tiene distancia configurada`);
   }
 
-  // 3. Cálculos ( lógica de negocio)
-  const bruto = datos.distancia_km * datos.tarifa_aplicada;
+  // SEGÚN ENUNCIADO: Considerar moneda pactada del contrato
+  const monedaContratoId = datos.moneda_id || 1; // Default GTQ si no existe
 
-  const descuento = datos.porcentaje_descuento
-    ? bruto * (datos.porcentaje_descuento / 100)
+  // 3. Cálculos en GTQ (moneda base de tarifas)
+  const brutoGTQ = datos.distancia_km * datos.tarifa_aplicada;
+
+  const descuentoGTQ = datos.porcentaje_descuento
+    ? brutoGTQ * (datos.porcentaje_descuento / 100)
     : 0;
 
-  const subtotal = bruto - descuento;
-  const iva      = subtotal * 0.12;
-  const total    = subtotal + iva;
+  const subtotalGTQ = brutoGTQ - descuentoGTQ;
+  const ivaGTQ = subtotalGTQ * 0.12;
+  const totalGTQ = subtotalGTQ + ivaGTQ;
 
-  // 4. Generar número de factura simple
+  // SEGÚN ENUNCIADO: Aplicar tipo de cambio vigente si moneda ≠ GTQ
+  let brutoMoneda = brutoGTQ;
+  let descuentoMoneda = descuentoGTQ;
+  let subtotalMoneda = subtotalGTQ;
+  let ivaMoneda = ivaGTQ;
+  let totalMoneda = totalGTQ;
+
+  if (monedaContratoId !== 1) {
+    // Convertir a la moneda del contrato
+    brutoMoneda = await convertirMoneda(brutoGTQ, 1, monedaContratoId);
+    descuentoMoneda = await convertirMoneda(descuentoGTQ, 1, monedaContratoId);
+    subtotalMoneda = await convertirMoneda(subtotalGTQ, 1, monedaContratoId);
+    ivaMoneda = await convertirMoneda(ivaGTQ, 1, monedaContratoId);
+    totalMoneda = await convertirMoneda(totalGTQ, 1, monedaContratoId);
+  }
+
+  // 4. Generar número de factura
   const numeroFactura = `FEL-${Date.now()}`;
 
-  // 5. Crear borrador
+  // 5. Crear borrador CON MONEDA Y VALORES EN GTQ (para auditoría SAT)
   const borrador = await crearBorrador({
     orden_id: datos.orden_id,
     cliente_id: datos.cliente_id,
@@ -805,15 +849,18 @@ const generarBorradorDesdeOrden = async (orden_id) => {
     numero_factura: numeroFactura,
     distancia_km: datos.distancia_km,
     tarifa_aplicada: datos.tarifa_aplicada,
-    descuento_aplicado: descuento,
-    subtotal,
-    iva,
-    total_factura: total,
+    descuento_aplicado: descuentoMoneda,
+    subtotal: subtotalMoneda,
+    iva: ivaMoneda,
+    total_factura: totalMoneda,
     nit_cliente: datos.cliente_nit,
     nombre_cliente_facturacion: datos.cliente_nombre,
+    moneda_id: monedaContratoId, // ← Moneda pactada del contrato
+    subtotal_gtq: subtotalGTQ, // ← Para auditoría SAT si moneda ≠ GTQ
+    total_gtq: totalGTQ, // ← Para auditoría SAT si moneda ≠ GTQ
   });
 
-  console.log(`[FacturaFEL] Borrador creado para orden ${orden_id}`);
+  console.log(`[FacturaFEL] Borrador creado para orden ${orden_id} en moneda ${monedaContratoId}`);
 
   return borrador;
 };

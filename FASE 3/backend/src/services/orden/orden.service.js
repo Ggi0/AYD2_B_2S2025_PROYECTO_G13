@@ -205,8 +205,8 @@ async function eventosTransito(payload) {
   }
 }
 
-async function finalizarRuta(id, rutasArchivos) {
-  const result = await ordenStore.finalizarEntrega(id, rutasArchivos);
+async function finalizarRuta(id, rutasArchivos, io = null) {
+  const result = await ordenStore.finalizarEntrega(id, rutasArchivos, io);
   return result;
 }
 

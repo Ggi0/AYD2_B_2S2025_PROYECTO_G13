@@ -214,6 +214,7 @@ const TiposRegistro: React.FC = () => {
                   name="pais"
                   value={formData.pais}
                   onChange={handleInputChange}
+                  required
                   className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
                 >
                   <option value="">Selecciona tu país</option>

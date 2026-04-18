@@ -170,10 +170,14 @@ async function actualizarRutaTransitoF(req, res) {
   try {
     const { id } = req.params;
 
+    // Obtener io desde app — igual que en el controlador de facturación
+    const io = req.app.get("io");
+
     const folder = req.query.folder || "evidencias";
     const rutasRelativas = req.files.map((f) => `${folder}/${f.filename}`);
 
-    const result = await ordenService.finalizarRuta(id, rutasRelativas);
+    // Pasar io al servicio para que llegue hasta el store y luego al servicio de facturación
+    const result = await ordenService.finalizarRuta(id, rutasRelativas, io);
 
     res.status(200).json({ ok: true, data: result });
   } catch (error) {

@@ -81,6 +81,7 @@ async function register(payload) {
     nombres: String(nombres || "").trim(),
     apellidos: String(apellidos || "").trim(),
     telefono: String(telefono || "").trim(),
+    pais: String(payload.pais || "").trim(),
   });
 
   try {

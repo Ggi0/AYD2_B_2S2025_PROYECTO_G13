@@ -35,9 +35,9 @@ async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
       ORDER BY t.limite_peso_ton ASC, c.fecha_inicio DESC;
 
       -- 2. Devolver los datos del contrato encontrado (Recordset 0)
-      SELECT id, limite_credito, saldo_usado 
-      FROM contratos 
-      WHERE id = @v_contrato_id;
+      SELECT id, limite_credito, saldo_usado, moneda_id
+FROM contratos 
+WHERE id = @v_contrato_id;
 
       -- 3. Facturas Vencidas (Recordset 1)
       SELECT COUNT(*) as vencidas 
@@ -443,7 +443,9 @@ async function registrarEventoBitacora(datos) {
   return result.recordset[0];
 }
 
-async function finalizarEntrega(ordenId, rutasArchivos) {
+
+
+async function finalizarEntrega(ordenId, rutasArchivos, io = null) {
   const pool = await getConnection();
   const transaction = new sql.Transaction(pool);
 
@@ -527,23 +529,20 @@ async function finalizarEntrega(ordenId, rutasArchivos) {
 
     await transaction.commit();
 
-    // ── NUEVO: generar borrador de factura automáticamente ──────────────
-    // Se ejecuta FUERA de la transacción para no bloquear el cierre.
-    // Si falla, solo se loguea; el agente puede generarlo manualmente.
+     // ── Generar borrador automático ──────────────────────────────────
+    // Ahora usa el SERVICIO (no el modelo directo) para que pueda
+    // emitir el evento WebSocket.
     try {
-      const FacturaFEL = require("../facturacion/FacturaFel");
-
-      // usuario_id: puede ser null aquí; el servicio lo acepta para el
-      // generarBorrador porque no lo necesita para insertar en BD.
-      await FacturaFEL.generarBorradorDesdeOrden(parseInt(ordenId));
+      const facturacionService = require("../../services/facturacion/Facturacion");
+      await facturacionService.generarBorrador(parseInt(ordenId), null, io);
     } catch (facturaError) {
       console.error(
         `[orden.store] No se generó borrador automático para orden ${ordenId}:`,
-        facturaError.message,
+        facturaError.message
       );
       // NO relanzar: el cierre de la orden ya fue exitoso
     }
-    // ────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────
 
     return { ordenId, vehiculoLiberado: vehiculoId, estadoFinal: "CERRADA" };
   } catch (error) {

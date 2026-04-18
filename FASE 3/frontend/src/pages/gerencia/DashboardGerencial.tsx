@@ -1,8 +1,15 @@
 // src/pages/finanzas/DashboardGerencial.tsx
 import React, { useEffect, useState, useCallback } from "react";
 import { getCorteDiario, getKPIs, getAlertas } from "../../services/Gerencial/gerencial";
+import { useMonedas } from "../../services/monedas/hooks/useMonedas";
+import { formatMoney } from "../../services/Logistico/Logistico";
 import { FaSignOutAlt } from 'react-icons/fa';
 import { useNavigate } from "react-router-dom";
+import { 
+  FaChartLine, FaDollarSign, FaPercent, FaCheckCircle, 
+  FaBox, FaTruck, FaClock, FaExclamationTriangle, FaCheckDouble,
+  FaArrowUp, FaArrowDown 
+} from 'react-icons/fa';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -48,12 +55,32 @@ type Alerta = {
   severidad?: "ALTA" | "MEDIA" | "BAJA";
 };
 
+// ─── Utility Functions ───────────────────────────────────────────────────────
+
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const SEDES = [
   { key: "guatemala", label: "Guatemala" },
   { key: "xela", label: "Xela" },
   { key: "puerto_barrios", label: "Puerto Barrios" },
+];
+
+const MONEDAS = [
+  { id: 0, codigo: "TODAS", nombre: "Todas las monedas" },
+  { id: 1, codigo: "GTQ", nombre: "Quetzal (GTQ)" },
+  { id: 2, codigo: "USD", nombre: "Dólar (USD)" },
+  { id: 6, codigo: "HNL", nombre: "Lempira (HNL)" },
+  { id: 7, codigo: "SVC", nombre: "Colón (SVC)" },
 ];
 
 function normalizeSedeKey(value?: string) {
@@ -78,13 +105,15 @@ const TIPO_ALERTA_ICON: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 const DashboardGerencial: React.FC = () => {
+  const navigate = useNavigate();
+  const { obtenerSimboloMoneda } = useMonedas();
   const [corte, setCorte] = useState<CorteDiario[]>([]);
   const [kpis, setKpis] = useState<KPIs>({});
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [sedeSeleccionada, setSedeSeleccionada] = useState("guatemala");
+  const [monedaSeleccionada, setMonedaSeleccionada] = useState(0); // 0 = todas
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem('userToken');
@@ -100,8 +129,8 @@ const DashboardGerencial: React.FC = () => {
     setError(null);
     try {
       const [corteRes, kpisRes, alertasRes] = await Promise.allSettled([
-        getCorteDiario(),
-        getKPIs({ desde: hace30, hasta: hoy, sede: sedeSeleccionada }),
+        getCorteDiario({ moneda_id: monedaSeleccionada === 0 ? null : monedaSeleccionada }),
+        getKPIs({ desde: hace30, hasta: hoy, sede: sedeSeleccionada, moneda_id: monedaSeleccionada === 0 ? null : monedaSeleccionada }),
         getAlertas(),
       ]);
 
@@ -180,7 +209,7 @@ const DashboardGerencial: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [sedeSeleccionada, hoy, hace30]);
+  }, [sedeSeleccionada, monedaSeleccionada, hoy, hace30]);
 
   useEffect(() => {
     fetchDashboard();
@@ -217,116 +246,172 @@ const DashboardGerencial: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-gray-100">
       {/* Header */}
-      <div className="bg-blue-900 text-white px-6 py-5 shadow-lg">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Tablero de Control Gerencial</h1> 
-            <p className="text-blue-200 text-sm mt-1">
-              {new Date().toLocaleDateString("es-GT", {
-                weekday: "long", year: "numeric", month: "long", day: "numeric",
-              })}
-            </p>
+      <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-blue-900 text-white px-6 py-6 shadow-2xl border-b border-blue-700">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-blue-700 rounded-lg">
+                  <FaChartLine className="text-2xl" />
+                </div>
+                <h1 className="text-3xl font-bold">Control Gerencial</h1>
+              </div>
+              <p className="text-blue-200 text-sm">
+                📅 {new Date().toLocaleDateString("es-GT", {
+                  weekday: "long", year: "numeric", month: "long", day: "numeric",
+                })}
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors"
+            >
+              <FaSignOutAlt className="h-4 w-4" />
+              Salir
+            </button>
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
-            {SEDES.map((s) => (
-              <button
-                key={s.key}
-                onClick={() => setSedeSeleccionada(s.key)}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
-                  sedeSeleccionada === s.key
-                    ? "bg-white text-blue-900"
-                    : "bg-blue-800 text-blue-100 hover:bg-blue-700"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-            <div className="h-6 w-px bg-blue-700 mx-2"></div>
+
+          {/* Controls */}
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Sedes */}
+            <div className="flex gap-2">
+              {SEDES.map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => setSedeSeleccionada(s.key)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
+                    sedeSeleccionada === s.key
+                      ? "bg-white text-blue-900 shadow-lg"
+                      : "bg-blue-700 text-blue-100 hover:bg-blue-600"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="h-6 w-px bg-blue-600"></div>
+
+            {/* Moneda */}
+            <select
+              value={monedaSeleccionada}
+              onChange={(e) => setMonedaSeleccionada(Number(e.target.value))}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-blue-700 text-white hover:bg-blue-600 border border-blue-600 transition cursor-pointer"
+            >
+              {MONEDAS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre}
+                </option>
+              ))}
+            </select>
+
+            <div className="h-6 w-px bg-blue-600"></div>
+
+            {/* Bitácora */}
             <button
               onClick={() => navigate('/Gerencia/bitacora')}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Bitácora
             </button>
           </div>
-        <button
-            onClick={handleLogout}
-            className="flex items-center px-3 py-2 text-sm text-white-600 hover:text-red-600 transition-colors"
-        >
-            <FaSignOutAlt className="h-4 w-4 mr-1" />
-            <span className="hidden md:inline">Salir</span>
-        </button>          
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {error && (
-          <div className="p-4 bg-red-50 border border-red-300 rounded-xl text-red-800 text-sm">{error}</div>
+          <div className="p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-lg font-semibold">
+            {error}
+          </div>
         )}
 
         {/* ── KPIs de Rentabilidad y Cumplimiento ── */}
         <section>
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-            KPIs — Últimos 30 días · Sede {SEDES.find((s) => s.key === sedeSeleccionada)?.label}
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Desempeño General</h2>
+            <p className="text-sm text-gray-500">
+              Últimos 30 días · {SEDES.find((s) => s.key === sedeSeleccionada)?.label} · {MONEDAS.find((m) => m.id === monedaSeleccionada)?.codigo}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Ingresos */}
-            <div className="bg-white rounded-2xl border shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Ingresos</p>
-              <p className="text-2xl font-bold text-green-600 mt-2">
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl border border-green-200 shadow-sm p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-green-200 rounded-lg">
+                  <FaDollarSign className="text-green-700 text-xl" />
+                </div>
+                {kpis.ingresos && kpis.costos && kpis.ingresos > kpis.costos && (
+                  <FaArrowUp className="text-green-600 text-lg" />
+                )}
+              </div>
+              <p className="text-xs font-semibold text-green-600 uppercase tracking-wide mb-2">Ingresos Totales</p>
+              <p className="text-3xl font-bold text-green-900 mb-2">
                 {kpis.ingresos != null
-                  ? `Q ${kpis.ingresos.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
+                  ? formatMoney(kpis.ingresos, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada))
                   : "—"}
               </p>
+              <p className="text-xs text-green-700">Período de reporte</p>
             </div>
+
             {/* Costos */}
-            <div className="bg-white rounded-2xl border shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Costos operativos</p>
-              <p className="text-2xl font-bold text-red-500 mt-2">
+            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl border border-red-200 shadow-sm p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-red-200 rounded-lg">
+                  <FaArrowDown className="text-red-700 text-xl" />
+                </div>
+              </div>
+              <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-2">Costos Operativos</p>
+              <p className="text-3xl font-bold text-red-900 mb-2">
                 {kpis.costos != null
-                  ? `Q ${kpis.costos.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
+                  ? formatMoney(kpis.costos, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada))
                   : "—"}
               </p>
+              <p className="text-xs text-red-700">Gastos operacionales</p>
             </div>
+
             {/* Margen */}
-            <div className="bg-white rounded-2xl border shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Margen de rentabilidad</p>
-              <p className={`text-2xl font-bold mt-2 ${(margen ?? 0) >= 0 ? "text-green-600" : "text-red-500"}`}>
-                {margen != null ? `${margen}%` : "—"}
-              </p>
-              {margen != null && (
-                <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full ${margen >= 0 ? "bg-green-500" : "bg-red-500"}`}
-                    style={{ width: `${Math.min(100, Math.abs(margen))}%` }}
-                  />
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl border border-blue-200 shadow-sm p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-blue-200 rounded-lg">
+                  <FaPercent className="text-blue-700 text-xl" />
                 </div>
-              )}
+                <span className={`text-lg font-bold ${(margen ?? 0) >= 20 ? "text-green-600" : (margen ?? 0) >= 0 ? "text-yellow-600" : "text-red-600"}`}>
+                  {margen}%
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">Margen Neto</p>
+              <div className="h-3 bg-blue-200 rounded-full overflow-hidden mb-3">
+                <div
+                  className={`h-3 rounded-full ${margen >= 20 ? "bg-green-500" : margen >= 0 ? "bg-yellow-500" : "bg-red-500"}`}
+                  style={{ width: `${Math.min(100, Math.max(0, (margen ?? 0) / 100) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-blue-700 font-semibold">Rentabilidad del negocio</p>
             </div>
+
             {/* Cumplimiento */}
-            <div className="bg-white rounded-2xl border shadow-sm p-5">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cumplimiento tiempo</p>
-              <p className={`text-2xl font-bold mt-2 ${(cumplimiento ?? 100) >= 80 ? "text-green-600" : "text-yellow-600"}`}>
-                {cumplimiento != null ? `${cumplimiento}%` : "—"}
-              </p>
-              {cumplimiento != null && (
-                <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-2 rounded-full ${cumplimiento >= 80 ? "bg-green-500" : "bg-yellow-500"}`}
-                    style={{ width: `${cumplimiento}%` }}
-                  />
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl border border-purple-200 shadow-sm p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-purple-200 rounded-lg">
+                  <FaCheckCircle className="text-purple-700 text-xl" />
                 </div>
-              )}
-              {kpis.tiempo_promedio_entrega != null && (
-                <p className="text-xs text-gray-400 mt-1">
-                  Promedio: {kpis.tiempo_promedio_entrega}h vs {kpis.tiempo_pactado}h pactado
-                </p>
-              )}
+                <span className={`text-lg font-bold ${(cumplimiento ?? 100) >= 80 ? "text-green-600" : "text-yellow-600"}`}>
+                  {cumplimiento}%
+                </span>
+              </div>
+              <p className="text-xs font-semibold text-purple-600 uppercase tracking-wide mb-2">Cumplimiento SLA</p>
+              <div className="h-3 bg-purple-200 rounded-full overflow-hidden mb-3">
+                <div
+                  className={`h-3 rounded-full ${cumplimiento >= 80 ? "bg-green-500" : "bg-yellow-500"}`}
+                  style={{ width: `${cumplimiento}%` }}
+                />
+              </div>
+              <p className="text-xs text-purple-700 font-semibold">Entregas a tiempo</p>
             </div>
           </div>
         </section>
@@ -334,46 +419,52 @@ const DashboardGerencial: React.FC = () => {
         {/* ── Rentabilidad por contrato ── */}
         {contratos.length > 0 && (
           <section>
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">
-              Rentabilidad por contrato
-            </h2>
-            <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Rentabilidad por Contrato</h2>
+              <p className="text-sm text-gray-500">Análisis detallado de cada acuerdo comercial</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-100">
-                    <tr>
-                      {["Contrato", "Cliente", "Ingresos (Q)", "Costos (Q)", "Ganancia (Q)", "Margen", ""].map((h) => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          {h}
-                        </th>
-                      ))}
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Contrato</th>
+                      <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wide">Cliente</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">Ingresos</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">Costos</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">Ganancia</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold text-gray-700 uppercase tracking-wide">Margen</th>
+                      <th className="px-6 py-4 text-xs font-bold text-gray-700 uppercase tracking-wide">Trend</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {contratos.map((c, i) => {
                       const ganancia = c.ganancia ?? ((c.ingresos ?? 0) - (c.costos ?? 0));
                       const mg = c.margen_porcentaje ?? (c.ingresos ? Math.round((ganancia / c.ingresos) * 100) : null);
                       const barW = Math.min(100, Math.round((Math.abs(ganancia) / maxGanancia) * 100));
                       const positivo = ganancia >= 0;
                       return (
-                        <tr key={i} className="hover:bg-gray-50 transition">
-                          <td className="px-4 py-3 font-mono text-xs text-blue-900 font-semibold">{c.numero_contrato || `#${c.contrato_id}`}</td>
-                          <td className="px-4 py-3 text-gray-700">{c.cliente_nombre || "—"}</td>
-                          <td className="px-4 py-3 text-green-700 font-semibold">
-                            {c.ingresos != null ? `Q ${c.ingresos.toLocaleString("es-GT", { minimumFractionDigits: 2 })}` : "—"}
+                        <tr key={i} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 font-mono text-sm font-semibold text-blue-900 bg-blue-50">{c.numero_contrato || `#${c.contrato_id}`}</td>
+                          <td className="px-6 py-4 text-sm text-gray-700 font-medium">{c.cliente_nombre || "—"}</td>
+                          <td className="px-6 py-4 text-right text-sm font-semibold text-green-700">
+                            {c.ingresos != null ? formatMoney(c.ingresos, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada)) : "—"}
                           </td>
-                          <td className="px-4 py-3 text-red-500 font-semibold">
-                            {c.costos != null ? `Q ${c.costos.toLocaleString("es-GT", { minimumFractionDigits: 2 })}` : "—"}
+                          <td className="px-6 py-4 text-right text-sm font-semibold text-red-600">
+                            {c.costos != null ? formatMoney(c.costos, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada)) : "—"}
                           </td>
-                          <td className={`px-4 py-3 font-bold ${positivo ? "text-green-600" : "text-red-500"}`}>
-                            {positivo ? "+" : ""}Q {ganancia.toLocaleString("es-GT", { minimumFractionDigits: 2 })}
+                          <td className={`px-6 py-4 text-right text-sm font-bold ${positivo ? "text-green-600" : "text-red-600"}`}>
+                            {positivo ? "+ " : "− "}{formatMoney(Math.abs(ganancia), monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada))}
                           </td>
-                          <td className={`px-4 py-3 font-semibold ${positivo ? "text-green-600" : "text-red-500"}`}>
+                          <td className={`px-6 py-4 text-right text-sm font-bold ${positivo ? "text-green-600" : "text-red-600"}`}>
                             {mg != null ? `${mg}%` : "—"}
                           </td>
-                          <td className="px-4 py-3 w-28">
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <div className={`h-2 rounded-full ${positivo ? "bg-green-500" : "bg-red-400"}`} style={{ width: `${barW}%` }} />
+                          <td className="px-6 py-4 w-32">
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-2 rounded-full ${positivo ? "bg-green-500" : "bg-red-500"}`} 
+                                style={{ width: `${barW}%` }} 
+                              />
                             </div>
                           </td>
                         </tr>
@@ -387,86 +478,107 @@ const DashboardGerencial: React.FC = () => {
         )}
 
         {/* ── Corte Diario + Alertas ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Corte diario */}
-          <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Corte Diario de Operaciones</h2>
-              <span className="text-xs text-gray-400">{hoy}</span>
-            </div>
-            {!corteSede ? (
-              <div className="text-center py-12 text-gray-400 text-sm">Sin datos para hoy</div>
-            ) : (
-              <div className="px-5 py-4 grid grid-cols-2 gap-4 text-sm">
-                <Stat label="Total órdenes" value={corteSede.total_ordenes} />
-                <Stat label="Entregadas" value={corteSede.ordenes_entregadas} color="text-green-600" />
-                <Stat label="En tránsito" value={corteSede.ordenes_en_transito} color="text-indigo-600" />
-                <Stat label="Pendientes" value={corteSede.ordenes_pendientes} color="text-yellow-600" />
-                <Stat
-                  label="Facturado"
-                  value={corteSede.total_facturado != null
-                    ? `Q ${corteSede.total_facturado.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
-                    : undefined}
-                  color="text-blue-900"
-                />
-                <Stat
-                  label="Cobrado"
-                  value={corteSede.total_cobrado != null
-                    ? `Q ${corteSede.total_cobrado.toLocaleString("es-GT", { minimumFractionDigits: 2 })}`
-                    : undefined}
-                  color="text-green-700"
-                />
+        <section>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Estado Actual</h2>
+            <p className="text-sm text-gray-500">Situación de hoy, {hoy}</p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Corte diario */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <FaBox className="text-blue-600 text-lg" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">Corte Diario de Operaciones</h3>
+                  <p className="text-xs text-gray-500">{hoy}</p>
+                </div>
               </div>
-            )}
-          </section>
-
-          {/* Alertas */}
-          <section className="bg-white rounded-2xl border shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="font-bold text-gray-800">Alertas de Desviación</h2>
-              {alertas.length > 0 && (
-                <span className="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">
-                  {alertas.length}
-                </span>
+              {!corteSede ? (
+                <div className="text-center py-12 text-gray-400 text-sm">
+                  <FaBox className="mx-auto text-3xl mb-2 opacity-30" />
+                  <p>Sin datos para hoy</p>
+                </div>
+              ) : (
+                <div className="px-6 py-6 grid grid-cols-2 gap-6">
+                  <StatCard icon={<FaBox className="text-xl" />} label="Total órdenes" value={corteSede.total_ordenes} color="blue" />
+                  <StatCard icon={<FaCheckDouble className="text-xl" />} label="Entregadas" value={corteSede.ordenes_entregadas} color="green" />
+                  <StatCard icon={<FaTruck className="text-xl" />} label="En tránsito" value={corteSede.ordenes_en_transito} color="purple" />
+                  <StatCard icon={<FaClock className="text-xl" />} label="Pendientes" value={corteSede.ordenes_pendientes} color="yellow" />
+                  <StatCard 
+                    icon={<FaChartLine className="text-xl" />}
+                    label="Facturado" 
+                    value={corteSede.total_facturado != null ? formatMoney(corteSede.total_facturado, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada)) : undefined}
+                    color="cyan"
+                  />
+                  <StatCard 
+                    icon={<FaCheckCircle className="text-xl" />}
+                    label="Cobrado" 
+                    value={corteSede.total_cobrado != null ? formatMoney(corteSede.total_cobrado, monedaSeleccionada === 0 ? 'GTQ' : getCodigoMonedaDesdeId(monedaSeleccionada)) : undefined}
+                    color="emerald"
+                  />
+                </div>
               )}
             </div>
-            {alertas.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                <span className="text-3xl">✅</span>
-                <p className="mt-2">Sin alertas activas</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-                {alertas.map((a, i) => (
-                  <div key={i} className="px-5 py-3 flex items-start gap-3">
-                    <span className="text-xl mt-0.5">{TIPO_ALERTA_ICON[a.tipo || ""] || "⚠️"}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-gray-800 truncate">
-                          {a.cliente_nombre || a.ruta || "—"}
-                        </p>
-                        {a.severidad && (
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${SEVERIDAD_COLORS[a.severidad] || ""}`}>
-                            {a.severidad}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-0.5">{a.mensaje || "—"}</p>
-                    </div>
+
+            {/* Alertas */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-red-100 rounded-lg">
+                    <FaExclamationTriangle className="text-red-600 text-lg" />
                   </div>
-                ))}
+                  <div>
+                    <h3 className="font-bold text-gray-900">Alertas de Desviación</h3>
+                    <p className="text-xs text-gray-500">Eventos críticos y desviaciones</p>
+                  </div>
+                </div>
+                {alertas.length > 0 && (
+                  <span className="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">
+                    {alertas.length}
+                  </span>
+                )}
               </div>
-            )}
-          </section>
-        </div>
+              {alertas.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <span className="text-5xl">✅</span>
+                  <p className="mt-3 font-semibold text-gray-600">Sin alertas activas</p>
+                  <p className="text-sm text-gray-500 mt-1">Todo está funcionando correctamente</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+                  {alertas.map((a, i) => (
+                    <div key={i} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start gap-4">
+                        <span className="text-2xl mt-1">{TIPO_ALERTA_ICON[a.tipo || ""] || "⚠️"}</span>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold text-gray-900">{a.cliente_nombre || a.ruta || "Alerta"}</p>
+                            {a.severidad && (
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${SEVERIDAD_COLORS[a.severidad]}`}>
+                                {a.severidad}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600">{a.mensaje || "—"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* Refresh */}
         <div className="flex justify-end">
           <button
             onClick={fetchDashboard}
-            className="px-4 py-2 bg-blue-900 text-white rounded-xl text-sm font-semibold hover:bg-blue-800 transition flex items-center gap-2"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl transition-all"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Actualizar datos
@@ -483,5 +595,32 @@ const Stat: React.FC<{ label: string; value?: any; color?: string }> = ({ label,
     <p className={`font-semibold text-sm ${color}`}>{value ?? "—"}</p>
   </div>
 );
+
+const StatCard: React.FC<{ 
+  icon: React.ReactNode; 
+  label: string; 
+  value?: any; 
+  color: "blue" | "green" | "purple" | "yellow" | "cyan" | "emerald" | "red" 
+}> = ({ icon, label, value, color }) => {
+  const colorMap = {
+    blue: "bg-blue-50 border-blue-200 text-blue-700",
+    green: "bg-green-50 border-green-200 text-green-700",
+    purple: "bg-purple-50 border-purple-200 text-purple-700",
+    yellow: "bg-yellow-50 border-yellow-200 text-yellow-700",
+    cyan: "bg-cyan-50 border-cyan-200 text-cyan-700",
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-700",
+    red: "bg-red-50 border-red-200 text-red-700"
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 ${colorMap[color]}`}>
+      <div className="flex items-center gap-3 mb-2">
+        {icon}
+        <p className="text-xs font-semibold uppercase tracking-wide">{label}</p>
+      </div>
+      <p className="text-2xl font-bold">{value ?? "—"}</p>
+    </div>
+  );
+};
 
 export default DashboardGerencial;

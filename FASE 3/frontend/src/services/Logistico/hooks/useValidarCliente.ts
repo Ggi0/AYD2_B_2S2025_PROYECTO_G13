@@ -22,6 +22,9 @@ export interface ValidacionResultado {
     saldo_usado: number;
     saldo_disponible: number;
     plazo_pago: number;
+    moneda_id?: number;
+    nombre_moneda?: string;
+    simbolo_moneda?: string;
   };
   contratos_resumen?: {
     total_limite_credito: number;
@@ -35,6 +38,9 @@ export interface ValidacionResultado {
       saldo_disponible: number;
       fecha_fin?: string;
       plazo_pago?: number;
+      moneda_id?: number;
+      nombre_moneda?: string;
+      simbolo_moneda?: string;
     }>;
   };
   tarifa?: {

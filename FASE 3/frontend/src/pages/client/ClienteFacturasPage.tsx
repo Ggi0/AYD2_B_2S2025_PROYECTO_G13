@@ -6,6 +6,18 @@ import ClientHeader from '../../components/client/ClientHeader';
 import ClientMenu from '../../components/client/ClientMenu';
 import { getFacturasByCliente } from '../../services/facturacion/facturacion';
 import { formatMoney, formatDate } from '../../services/client/client';
+import apiService from '../../services/api';
+
+// Helper para obtener código de moneda desde moneda_id
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
 
 // ── Tipos ──────────────────────────────────────────────
 interface Factura {
@@ -33,7 +45,7 @@ const getEstadoInfo = (estado: string) => {
 };
 
 // ── Modal detalle ──────────────────────────────────────
-const ModalDetalle: React.FC<{ factura: Factura; onClose: () => void }> = ({ factura, onClose }) => {
+const ModalDetalle: React.FC<{ factura: Factura; onClose: () => void; monedaCode: string }> = ({ factura, onClose, monedaCode }) => {
   const estadoInfo = getEstadoInfo(factura.estado);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -75,7 +87,7 @@ const ModalDetalle: React.FC<{ factura: Factura; onClose: () => void }> = ({ fac
           )}
           <div className="flex justify-between border-t border-gray-200 pt-3 mt-3">
             <span className="text-gray-700 font-semibold">Total</span>
-            <span className="text-xl font-bold text-gray-900">{formatMoney(factura.monto_total)}</span>
+            <span className="text-xl font-bold text-gray-900">{formatMoney(factura.monto_total, monedaCode)}</span>
           </div>
         </div>
 
@@ -93,6 +105,7 @@ const ModalDetalle: React.FC<{ factura: Factura; onClose: () => void }> = ({ fac
 // ── Componente principal ───────────────────────────────
 const ClienteFacturasPage: React.FC = () => {
   const { user } = useAuth();
+  const [monedaCode, setMonedaCode] = useState('GTQ'); // Moneda por defecto
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,32 +124,34 @@ const ClienteFacturasPage: React.FC = () => {
     setError(null);
   
     try {
-      const response = await getFacturasByCliente(userId);
+      const [response, resContratos] = await Promise.all([
+        getFacturasByCliente(userId),
+        (apiService as any).listarContratosPorCliente(userId),
+      ]);
   
       if (response?.ok) {
         const facturasTransformadas = (response.data?.facturas || []).map((f: any) => ({
           id: f.id,
           numero_factura: f.numero_factura,
           fecha_emision: f.fecha_emision,
-        
-          // ⚠️ no viene del backend
           fecha_vencimiento: null,
-        
-          // 🔥 FIX IMPORTANTE
           monto_total: f.total_factura,
-        
           estado: f.estado,
-        
           uuid_autorizacion: f.uuid_autorizacion,
           orden_id: f.orden_id,
-        
-          // 🔥 FIX nombre correcto
           contrato_numero: f.numero_contrato,
         }));
         
         setFacturas(facturasTransformadas);
       } else {
         setError(response?.mensaje || 'Error al cargar facturas');
+      }
+      
+      // Obtener la moneda del primer contrato activo
+      if (resContratos?.ok && resContratos.data?.length > 0) {
+        const contratoActivo = resContratos.data[0];
+        const moneda = getCodigoMonedaDesdeId(contratoActivo.moneda_id);
+        setMonedaCode(moneda);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar facturas');
@@ -233,7 +248,7 @@ const ClienteFacturasPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Monto Pendiente</p>
-                <p className="text-xl font-bold text-red-600">{formatMoney(montoPendiente)}</p>
+                <p className="text-xl font-bold text-red-600">{formatMoney(montoPendiente, monedaCode)}</p>
               </div>
               <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
                 <FaFileInvoiceDollar className="w-6 h-6 text-white" />
@@ -297,7 +312,7 @@ const ClienteFacturasPage: React.FC = () => {
                           {factura.fecha_vencimiento ? formatDate(factura.fecha_vencimiento) : '—'}
                         </td>
                         <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                          {formatMoney(factura.monto_total)}
+                          {formatMoney(factura.monto_total, monedaCode)}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full ${estadoInfo.bg} ${estadoInfo.color}`}>
@@ -328,6 +343,7 @@ const ClienteFacturasPage: React.FC = () => {
         <ModalDetalle
           factura={facturaSeleccionada}
           onClose={() => setFacturaSeleccionada(null)}
+          monedaCode={monedaCode}
         />
       )}
     </div>

@@ -3,22 +3,26 @@ import apiService from "../api";
 
 /**
  * Corte diario de operaciones y facturación por sede
- * GET /api/gerencial/corte-diario
+ * GET /api/gerencial/corte-diario?moneda_id=1
  */
-export const getCorteDiario = async () => {
-  return apiService["request"]("/gerencial/corte-diario", { method: "GET" });
+export const getCorteDiario = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.moneda_id) query.append("moneda_id", params.moneda_id);
+  const url = `/gerencial/corte-diario${query.toString() ? "?" + query.toString() : ""}`;
+  return apiService["request"](url, { method: "GET" });
 };
 
 /**
  * KPIs de rentabilidad y cumplimiento
- * GET /api/gerencial/kpis?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&sede=guatemala
- * @param {Object} params - { desde, hasta, sede }
+ * GET /api/gerencial/kpis?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&sede=guatemala&moneda_id=1
+ * @param {Object} params - { desde, hasta, sede, moneda_id }
  */
 export const getKPIs = async (params = {}) => {
   const query = new URLSearchParams();
   if (params.desde) query.append("desde", params.desde);
   if (params.hasta) query.append("hasta", params.hasta);
   if (params.sede) query.append("sede", params.sede);
+  if (params.moneda_id) query.append("moneda_id", params.moneda_id);
   const url = `/gerencial/kpis${query.toString() ? "?" + query.toString() : ""}`;
   return apiService["request"](url, { method: "GET" });
 };

@@ -1,6 +1,6 @@
 // src/services/api.ts
 
-const API_BASE_URL = "/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export { API_BASE_URL };
 
@@ -83,6 +83,7 @@ export type CrearContratoPayload = {
   fecha_fin: string;
   limite_credito: number;
   plazo_pago: number;
+  moneda_id?: number; // 1=GTQ, 2=USD, 6=HNL, 7=SVC
   tarifas: TarifaNegociada[];
   rutas: RutaAutorizada[];
 };
@@ -123,6 +124,9 @@ export type Contrato = {
   fecha_creacion: string;
   creado_por_nombre?: string;
   modificado_por_nombre?: string;
+  moneda_id: number; // 1=GTQ, 2=USD, 6=HNL, 7=SVC
+  nombre_moneda?: string;
+  simbolo_moneda?: string;
 };
 
 export type ValidacionCliente = {

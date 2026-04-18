@@ -3,6 +3,17 @@ import React from 'react';
 import { FaFileContract, FaCalendarAlt, FaMoneyBillWave, FaCreditCard } from 'react-icons/fa';
 import { formatMoney, formatDate, getContratoEstadoInfo } from '../../services/Logistico/Logistico';
 
+// Función para mapear moneda_id a código de moneda
+const getCodigoMonedaDesdeId = (moneda_id?: number): string => {
+  const monedasMap: Record<number, string> = {
+    1: 'GTQ',
+    2: 'USD',
+    6: 'HNL',
+    7: 'SVC'
+  };
+  return moneda_id ? (monedasMap[moneda_id] || 'GTQ') : 'GTQ';
+};
+
 interface ContractCardProps {
   contract: any;
   onViewDetails: (id: number) => void;
@@ -52,7 +63,7 @@ const ClientContractCard: React.FC<ContractCardProps> = ({ contract, onViewDetai
             <FaCreditCard className="h-5 w-5 text-gray-400" />
             <div>
               <p className="text-xs text-gray-500">Crédito Disponible</p>
-              <p className="text-sm font-medium text-green-600">{formatMoney(creditoDisponible)}</p>
+              <p className="text-sm font-medium text-green-600">{formatMoney(creditoDisponible, getCodigoMonedaDesdeId(contract.moneda_id))}</p>
             </div>
           </div>
         </div>
@@ -60,9 +71,9 @@ const ClientContractCard: React.FC<ContractCardProps> = ({ contract, onViewDetai
         <div className="border-t border-gray-200 pt-4 flex justify-between items-center">
           <div className="text-sm">
             <span className="text-gray-500">Límite de crédito: </span>
-            <span className="font-medium">{formatMoney(contract.limite_credito)}</span>
+            <span className="font-medium">{formatMoney(contract.limite_credito, getCodigoMonedaDesdeId(contract.moneda_id))}</span>
             <span className="text-gray-500 ml-4">Usado: </span>
-            <span className="font-medium text-yellow-600">{formatMoney(saldoUsado)}</span>
+            <span className="font-medium text-yellow-600">{formatMoney(saldoUsado, getCodigoMonedaDesdeId(contract.moneda_id))}</span>
           </div>
           <button
             onClick={() => onViewDetails(contract.id)}

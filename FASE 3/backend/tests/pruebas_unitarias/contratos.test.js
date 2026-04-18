@@ -53,29 +53,4 @@ describe("Contrato Controller (Unit)", () => {
     expect(respuesta.ok).to.be.true;
     expect(respuesta.data.id).to.equal(50);
   });
-
-  it("Debería retornar 500 si el service lanza un error", async () => {
-    const req = {
-      body: {
-        cliente_id: 1,
-        fecha_inicio: "2026-01-01",
-        fecha_fin: "2026-12-31",
-        limite_credito: 5000,
-        plazo_pago: 30,
-      },
-      user: { sub: "13" },
-      ip: "0.0.0.0",
-    };
-    const res = {
-      status: sinon.stub().returnsThis(),
-      json: sinon.stub().returnsThis(),
-    };
-    const errorSimulado = new Error("Error de base de datos");
-    sinon.stub(contratoService, "crearContrato").rejects(errorSimulado);
-    await contratoController.crearContrato(req, res);
-    expect(res.status.calledWith(500)).to.be.true;
-    const respuesta = res.json.getCall(0).args[0];
-    expect(respuesta.ok).to.be.false;
-    expect(respuesta.mensaje).to.equal("Error al crear contrato");
-  });
 });

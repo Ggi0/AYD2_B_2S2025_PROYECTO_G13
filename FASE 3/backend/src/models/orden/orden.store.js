@@ -35,9 +35,9 @@ async function obtenerContextoValidacion(cliente_id, origen, destino, peso) {
       ORDER BY t.limite_peso_ton ASC, c.fecha_inicio DESC;
 
       -- 2. Devolver los datos del contrato encontrado (Recordset 0)
-      SELECT id, limite_credito, saldo_usado 
-      FROM contratos 
-      WHERE id = @v_contrato_id;
+      SELECT id, limite_credito, saldo_usado, moneda_id
+FROM contratos 
+WHERE id = @v_contrato_id;
 
       -- 3. Facturas Vencidas (Recordset 1)
       SELECT COUNT(*) as vencidas 

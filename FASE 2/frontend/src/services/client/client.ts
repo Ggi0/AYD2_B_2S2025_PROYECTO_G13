@@ -2,7 +2,7 @@
 import apiService from '../api';
 import type { Contrato } from '../api';
 
-// ============ TIPOS ESPECÍFICOS PARA CLIENTE ==========
+// tipos especificos del cliente
 
 export type DashboardStats = {
   activeContracts: number;
@@ -40,7 +40,7 @@ export type ActividadReciente = {
   estado: string;
 };
 
-// ============ SERVICIOS DEL CLIENTE ==========
+// servicios del cliente
 
 export const ClientService = {
   /**
@@ -129,7 +129,7 @@ export const ClientService = {
   }
 };
 
-// ============ UTILIDADES ==========
+// utilidades
 
 export const formatMoney = (value: number): string => {
   return new Intl.NumberFormat('es-GT', {

@@ -274,7 +274,7 @@ async function certificarFactura(factura_id, certificado_por) {
 
   const saldoAnterior = parseFloat(contrato.saldo_usado) || 0;
   const saldoNuevo    = r2(saldoAnterior + parseFloat(factura.total_factura));
-  await Contrato.actualizarSaldo(factura.contrato_id, saldoNuevo);
+  await Contrato.actualizarSaldo_finanzas(factura.contrato_id, saldoNuevo);
 
   const movimiento = await FacturaFEL.registrarMovimientoCredito({
     contrato_id:      factura.contrato_id,
@@ -372,7 +372,7 @@ async function registrarPago(datos, registrado_por) {
   const contrato      = await Contrato.buscarPorId(factura.contrato_id);
   const saldoAnterior = parseFloat(contrato.saldo_usado) || 0;
   const saldoNuevo    = r2(Math.max(0, saldoAnterior - parseFloat(monto_pagado)));
-  await Contrato.actualizarSaldo(factura.contrato_id, saldoNuevo);
+  await Contrato.actualizarSaldo_finanzas(factura.contrato_id, saldoNuevo);
 
   const movimiento = await FacturaFEL.registrarMovimientoCredito({
     contrato_id:      factura.contrato_id,

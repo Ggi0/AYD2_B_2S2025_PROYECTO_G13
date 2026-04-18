@@ -327,6 +327,32 @@ const actualizarSaldo = async (id, saldo_usado) => {
   return result.recordset[0];
 };
 
+// metodo extra solo para que funcione en finanzas es similar al de arriba
+const actualizarSaldo_finanzas = async (id, saldo_usado) => {
+  const pool = await getConnection();
+
+  // 1. UPDATE SIN OUTPUT
+  await pool.request()
+    .input('id',          sql.Int,          id)
+    .input('saldo_usado', sql.Decimal(15,2), saldo_usado)
+    .query(`
+      UPDATE contratos
+      SET saldo_usado = @saldo_usado
+      WHERE id = @id
+    `);
+
+  // 2. SELECT posterior
+  const result = await pool.request()
+    .input('id', sql.Int, id)
+    .query(`
+      SELECT id, saldo_usado, limite_credito
+      FROM contratos
+      WHERE id = @id
+    `);
+
+  return result.recordset[0];
+};
+
 /**
  * Cambia el estado de un contrato
  * @async
@@ -382,5 +408,6 @@ module.exports = {
   actualizarSaldo,
   cambiarEstado,
   listarTodos,
-  obtenerUltimoContrato
+  obtenerUltimoContrato,
+  actualizarSaldo_finanzas
 };

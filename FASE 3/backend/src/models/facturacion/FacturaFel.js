@@ -53,7 +53,7 @@ const { getConnection } = require("../../config/db");
  */
 const crearBorrador = async (datos) => {
   const {
-    orden_id, cliente_id, contrato_id, numero_factura,
+    orden_id, cliente_id, contrato_id, moneda_id, numero_factura,
     distancia_km, tarifa_aplicada, descuento_aplicado,
     subtotal, iva, total_factura,
     nit_cliente, nombre_cliente_facturacion,
@@ -61,40 +61,49 @@ const crearBorrador = async (datos) => {
  
   const pool   = await getConnection();
   const result = await pool.request()
-    .input("orden_id",                   sql.Int,            orden_id)
-    .input("cliente_id",                 sql.Int,            cliente_id)
-    .input("contrato_id",                sql.Int,            contrato_id)
-    .input("numero_factura",             sql.NVarChar(50),   numero_factura)
-    .input("distancia_km",               sql.Decimal(10, 2), distancia_km)
-    .input("tarifa_aplicada",            sql.Decimal(10, 2), tarifa_aplicada)
-    .input("descuento_aplicado",         sql.Decimal(15, 2), descuento_aplicado)
-    .input("subtotal",                   sql.Decimal(15, 2), subtotal)
-    .input("iva",                        sql.Decimal(15, 2), iva)
-    .input("total_factura",              sql.Decimal(15, 2), total_factura)
-    .input("nit_cliente",                sql.NVarChar(13),   nit_cliente)
-    .input("nombre_cliente_facturacion", sql.NVarChar(255),  nombre_cliente_facturacion)
-    .query(`
-      INSERT INTO facturas_fel (
-        orden_id, cliente_id, contrato_id, numero_factura,
-        estado,
-        distancia_km, tarifa_aplicada, descuento_aplicado,
-        subtotal, iva, total_factura,
-        nit_cliente, nombre_cliente_facturacion,
-        fecha_emision
-      )
-      OUTPUT INSERTED.*
-      VALUES (
-        @orden_id, @cliente_id, @contrato_id, @numero_factura,
-        'BORRADOR',
-        @distancia_km, @tarifa_aplicada, @descuento_aplicado,
-        @subtotal, @iva, @total_factura,
-        @nit_cliente, @nombre_cliente_facturacion,
-        GETDATE()
-      )
-    `);
+  .input("orden_id", sql.Int, orden_id)
+  .input("moneda_id", sql.Int, moneda_id)
+  .input("cliente_id", sql.Int, cliente_id)
+  .input("contrato_id", sql.Int, contrato_id)
+  .input("numero_factura", sql.NVarChar(50), numero_factura)
+  .input("distancia_km", sql.Decimal(10, 2), distancia_km)
+  .input("tarifa_aplicada", sql.Decimal(10, 2), tarifa_aplicada)
+  .input("descuento_aplicado", sql.Decimal(15, 2), descuento_aplicado)
+  .input("subtotal", sql.Decimal(15, 2), subtotal)
+  .input("iva", sql.Decimal(15, 2), iva)
+  .input("total_factura", sql.Decimal(15, 2), total_factura)
+  .input("nit_cliente", sql.NVarChar(13), nit_cliente)
+  .input("nombre_cliente_facturacion", sql.NVarChar(255), nombre_cliente_facturacion)
+  .query(`
+    INSERT INTO facturas_fel (
+      orden_id, cliente_id, contrato_id, moneda_id, numero_factura,
+      estado,
+      distancia_km, tarifa_aplicada, descuento_aplicado,
+      subtotal, iva, total_factura,
+      nit_cliente, nombre_cliente_facturacion,
+      fecha_emision
+    )
+    VALUES (
+      @orden_id, @cliente_id, @contrato_id, @moneda_id, @numero_factura,
+      'BORRADOR',
+      @distancia_km, @tarifa_aplicada, @descuento_aplicado,
+      @subtotal, @iva, @total_factura,
+      @nit_cliente, @nombre_cliente_facturacion,
+      GETDATE()
+    );
+
+    SELECT SCOPE_IDENTITY() AS id;
+  `);
  
-  return result.recordset[0];
-};
+    const id = result.recordset[0].id;
+
+    const factura = await pool.request()
+      .input("id", sql.Int, id)
+      .query(`SELECT * FROM facturas_fel WHERE id = @id`);
+    
+    return factura.recordset[0];
+  
+  };
 
 /**
  * Certifica una factura: la pasa de VALIDADA -> CERTIFICADA.
@@ -109,13 +118,14 @@ const crearBorrador = async (datos) => {
  * @returns {Promise<Object>} Factura certificada
  */
 const certificarFactura = async (factura_id, certificado_por, uuid_autorizacion, xml_fel, pdf_fel_url) => {
-  const pool   = await getConnection();
-  const result = await pool.request()
-    .input("factura_id",        sql.Int,          factura_id)
-    .input("certificado_por",   sql.Int,          certificado_por)
+  const pool = await getConnection();
+
+  await pool.request()
+    .input("factura_id", sql.Int, factura_id)
+    .input("certificado_por", sql.Int, certificado_por)
     .input("uuid_autorizacion", sql.NVarChar(100), uuid_autorizacion)
-    .input("xml_fel",           sql.NVarChar(sql.MAX), xml_fel)
-    .input("pdf_fel_url",       sql.NVarChar(500), pdf_fel_url)
+    .input("xml_fel", sql.NVarChar(sql.MAX), xml_fel)
+    .input("pdf_fel_url", sql.NVarChar(500), pdf_fel_url)
     .query(`
       UPDATE facturas_fel
       SET estado              = 'CERTIFICADA',
@@ -124,11 +134,14 @@ const certificarFactura = async (factura_id, certificado_por, uuid_autorizacion,
           xml_fel             = @xml_fel,
           pdf_fel_url         = @pdf_fel_url,
           fecha_certificacion = GETDATE()
-      OUTPUT INSERTED.*
       WHERE id = @factura_id
         AND estado = 'VALIDADA'
     `);
- 
+
+  const result = await pool.request()
+    .input("factura_id", sql.Int, factura_id)
+    .query(`SELECT * FROM facturas_fel WHERE id = @factura_id`);
+
   return result.recordset[0];
 };
 
@@ -143,19 +156,23 @@ const certificarFactura = async (factura_id, certificado_por, uuid_autorizacion,
  * @returns {Promise<Object>}
  */
 const actualizarEstado = async (factura_id, estado, observaciones = null) => {
-  const pool   = await getConnection();
-  const result = await pool.request()
-    .input("factura_id",    sql.Int,          factura_id)
-    .input("estado",        sql.NVarChar(15), estado)
+  const pool = await getConnection();
+
+  await pool.request()
+    .input("factura_id", sql.Int, factura_id)
+    .input("estado", sql.NVarChar(15), estado)
     .input("observaciones", sql.NVarChar(1000), observaciones)
     .query(`
       UPDATE facturas_fel
       SET estado        = @estado,
           observaciones = COALESCE(@observaciones, observaciones)
-      OUTPUT INSERTED.*
       WHERE id = @factura_id
     `);
- 
+
+  const result = await pool.request()
+    .input("factura_id", sql.Int, factura_id)
+    .query(`SELECT * FROM facturas_fel WHERE id = @factura_id`);
+
   return result.recordset[0];
 };
 
@@ -321,16 +338,24 @@ const registrarValidacion = async (datos) => {
         resultado_validacion, mensaje_validacion,
         uuid_generado, validado_por, fecha_validacion
       )
-      OUTPUT INSERTED.*
       VALUES (
         @factura_id, @nit_validado, @nit_valido,
         @campos_obligatorios_completos,
         @resultado_validacion, @mensaje_validacion,
         @uuid_generado, @validado_por, GETDATE()
       )
+      SELECT SCOPE_IDENTITY() AS id;
+
     `);
+
+    const id = result.recordset[0].id;
+
  
-  return result.recordset[0];
+    const validacion = await pool.request()
+    .input("id", sql.Int, id)
+    .query(`SELECT * FROM validacion_fel WHERE id = @id`);
+
+  return validacion.recordset[0];
 };
 
 /* 
@@ -367,17 +392,25 @@ const crearCuentaPorCobrar = async (datos) => {
         fecha_emision, fecha_vencimiento,
         estado_cobro, creado_automaticamente
       )
-      OUTPUT INSERTED.*
       VALUES (
         @factura_id, @cliente_id, @contrato_id,
         @monto_original, @monto_original,
         CAST(GETDATE() AS DATE),
         DATEADD(DAY, @plazo_pago, CAST(GETDATE() AS DATE)),
         'PENDIENTE', 1
-      )
+      );
+
+      SELECT SCOPE_IDENTITY() AS id;
     `);
  
-  return result.recordset[0];
+    const id = result.recordset[0].id;
+
+    const cuenta = await pool.request()
+      .input("id", sql.Int, id)
+      .query(`SELECT * FROM cuentas_por_cobrar WHERE id = @id`);
+  
+
+  return cuenta.recordset[0];
 };
 
 /**
@@ -438,19 +471,22 @@ const actualizarCuentaPorCobrar = async (cuenta_id, nuevo_saldo) => {
   const pool   = await getConnection();
   const estado = nuevo_saldo <= 0 ? "PAGADA" : "PENDIENTE";
  
-  const result = await pool.request()
-    .input("cuenta_id",    sql.Int,            cuenta_id)
-    .input("nuevo_saldo",  sql.Decimal(15, 2), nuevo_saldo)
-    .input("estado_cobro", sql.NVarChar(10),   estado)
+  await pool.request()
+    .input("cuenta_id", sql.Int, cuenta_id)
+    .input("nuevo_saldo", sql.Decimal(15, 2), nuevo_saldo)
+    .input("estado_cobro", sql.NVarChar(10), estado)
     .query(`
       UPDATE cuentas_por_cobrar
       SET saldo_pendiente   = @nuevo_saldo,
           estado_cobro      = @estado_cobro,
           ultima_fecha_pago = CAST(GETDATE() AS DATE)
-      OUTPUT INSERTED.*
       WHERE id = @cuenta_id
     `);
- 
+
+  const result = await pool.request()
+    .input("cuenta_id", sql.Int, cuenta_id)
+    .query(`SELECT * FROM cuentas_por_cobrar WHERE id = @cuenta_id`);
+
   return result.recordset[0];
 };
 
@@ -506,16 +542,23 @@ const registrarPago = async (datos) => {
         banco_origen, cuenta_origen, numero_autorizacion_bancaria,
         registrado_por, observacion, fecha_registro
       )
-      OUTPUT INSERTED.*
       VALUES (
         @factura_id, @cuenta_por_cobrar_id, @cliente_id,
         @forma_pago, @monto_pagado, @fecha_hora_pago,
         @banco_origen, @cuenta_origen, @numero_autorizacion_bancaria,
         @registrado_por, @observacion, GETDATE()
-      )
+      );
+
+      SELECT SCOPE_IDENTITY() AS id;
     `);
  
-  return result.recordset[0];
+    const id = result.recordset[0].id;
+
+    const pago = await pool.request()
+      .input("id", sql.Int, id)
+      .query(`SELECT * FROM pagos_factura WHERE id = @id`);
+  
+    return pago.recordset[0];
 };
 
 /**
@@ -570,18 +613,19 @@ const registrarMovimientoCredito = async (datos) => {
     saldo_anterior, saldo_nuevo,
     motivo, registrado_por,
   } = datos;
- 
-  const pool   = await getConnection();
+
+  const pool = await getConnection();
+
   const result = await pool.request()
-    .input("contrato_id",      sql.Int,            contrato_id)
-    .input("factura_id",       sql.Int,            factura_id)
-    .input("pago_id",          sql.Int,            pago_id || null)
-    .input("tipo_movimiento",  sql.NVarChar(6),    tipo_movimiento)
+    .input("contrato_id", sql.Int, contrato_id)
+    .input("factura_id", sql.Int, factura_id)
+    .input("pago_id", sql.Int, pago_id || null)
+    .input("tipo_movimiento", sql.NVarChar(6), tipo_movimiento)
     .input("monto_movimiento", sql.Decimal(15, 2), monto_movimiento)
-    .input("saldo_anterior",   sql.Decimal(15, 2), saldo_anterior)
-    .input("saldo_nuevo",      sql.Decimal(15, 2), saldo_nuevo)
-    .input("motivo",           sql.NVarChar(500),  motivo)
-    .input("registrado_por",   sql.Int,            registrado_por)
+    .input("saldo_anterior", sql.Decimal(15, 2), saldo_anterior)
+    .input("saldo_nuevo", sql.Decimal(15, 2), saldo_nuevo)
+    .input("motivo", sql.NVarChar(500), motivo)
+    .input("registrado_por", sql.Int, registrado_por)
     .query(`
       INSERT INTO movimientos_credito_contrato (
         contrato_id, factura_id, pago_id,
@@ -589,16 +633,23 @@ const registrarMovimientoCredito = async (datos) => {
         saldo_anterior, saldo_nuevo,
         motivo, registrado_por, fecha_movimiento
       )
-      OUTPUT INSERTED.*
       VALUES (
         @contrato_id, @factura_id, @pago_id,
         @tipo_movimiento, @monto_movimiento,
         @saldo_anterior, @saldo_nuevo,
         @motivo, @registrado_por, GETDATE()
-      )
+      );
+
+      SELECT SCOPE_IDENTITY() AS id;
     `);
- 
-  return result.recordset[0];
+
+  const id = result.recordset[0].id;
+
+  const movimiento = await pool.request()
+    .input("id", sql.Int, id)
+    .query(`SELECT * FROM movimientos_credito_contrato WHERE id = @id`);
+
+  return movimiento.recordset[0];
 };
 
 /* 
@@ -648,6 +699,7 @@ const obtenerDatosParaBorrador = async (orden_id) => {
         c.plazo_pago,
         c.saldo_usado     AS contrato_saldo_usado,
         c.limite_credito  AS contrato_limite_credito,
+        c.moneda_id       AS moneda_id,
  
         -- Tipo de vehículo (para saber qué tarifa aplicar)
         tar.tipo_unidad,
@@ -718,6 +770,10 @@ const generarBorradorDesdeOrden = async (orden_id) => {
   // 2. Obtener datos base
   const datos = await obtenerDatosParaBorrador(orden_id);
 
+  if (!datos.moneda_id) {
+    throw new Error(`El contrato de la orden ${orden_id} no tiene moneda configurada`);
+  }
+
   if (!datos) {
     throw new Error(`No se encontraron datos para generar factura de orden ${orden_id}`);
   }
@@ -745,6 +801,7 @@ const generarBorradorDesdeOrden = async (orden_id) => {
     orden_id: datos.orden_id,
     cliente_id: datos.cliente_id,
     contrato_id: datos.contrato_id,
+    moneda_id: datos.moneda_id,
     numero_factura: numeroFactura,
     distancia_km: datos.distancia_km,
     tarifa_aplicada: datos.tarifa_aplicada,
